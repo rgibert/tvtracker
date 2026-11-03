@@ -18,30 +18,55 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
 
 ## First run
 
-Trakt requires every third-party app to use its own free API key.
+If the app was built with a Trakt **Client ID** (see
+[Build](#trakt-client-id-at-build-time)), it skips API setup and opens straight
+on the Trakt connection step.
 
-1. Sign in at [trakt.tv](https://trakt.tv) and create a new API app at
-   <https://app.trakt.tv/settings/apps/api/new>. Trakt now asks you to link a
-   GitHub account before creating your first app.
-   - **Name:** anything, for example `TV Tracker`.
-   - **Redirect URI:** `https://example.com/oauth/callback` (or any HTTPS URL
-     you control). TV Tracker uses Trakt's device-code flow, so this URI is
-     never called. Don't use the old `urn:ietf:wg:oauth:2.0:oob` value; current
-     Trakt guidance advises against out-of-band and `localhost` redirects.
-2. Copy the **Client ID** (a long string of letters and numbers). A client
-   secret is not needed for the device flow; the field is kept under
-   "Advanced" only for older Trakt apps.
-3. Open TV Tracker, paste the Client ID, and tap **Continue**.
-4. Tap **Connect with Trakt**, then enter the short code shown in the app at
-   the Trakt activation page (the app has a button that opens it).
-5. Approve the app. The show lists load automatically.
+1. Open TV Tracker and tap **Connect with Trakt**.
+2. Enter the short code shown in the app at the Trakt activation page (the app
+   has a button that opens it), and approve the app.
+3. The show lists load automatically.
 
-The Client ID is stored on the device so this is only needed once. Use
-**Settings → Trakt API app → Change** to switch to a different API app.
+To use a different Trakt API app, create one at
+<https://app.trakt.tv/settings/apps/api/new> (Trakt now asks you to link a
+GitHub account first):
+
+- **Name:** anything, for example `TV Tracker`.
+- **Redirect URI:** `https://example.com/oauth/callback` (or any HTTPS URL you
+  control). TV Tracker uses Trakt's device-code flow, so this URI is never
+  called. Don't use the old `urn:ietf:wg:oauth:2.0:oob` value; current Trakt
+  guidance advises against out-of-band and `localhost` redirects.
+- Copy the **Client ID**. A client secret is not needed for the device flow.
+
+Then use **Settings → Trakt API app → Change** to enter it.
 
 ## Build
 
 Requirements: JDK 17+ and an Android SDK with platform 35.
+
+### Trakt Client ID at build time
+
+The app can take its free Trakt **Client ID** at build time, so it never needs
+to be committed:
+
+```sh
+TRAKT_CLIENT_ID=your_client_id ./gradlew :app:assembleDebug
+# or
+./gradlew :app:assembleDebug -PtraktClientId=your_client_id
+```
+
+You can also add it to `local.properties` (already gitignored):
+
+```properties
+trakt.clientId=your_client_id
+```
+
+Precedence is `-PtraktClientId` → `TRAKT_CLIENT_ID` env var →
+`local.properties`. If none is supplied, the app asks for the Client ID on
+first launch. The value is compiled into `BuildConfig`; it is a public app
+identifier, not a secret.
+
+Then build or install:
 
 ```sh
 ./gradlew :app:assembleDebug

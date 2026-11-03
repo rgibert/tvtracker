@@ -39,6 +39,7 @@ class AuthRepository(
     private val session: Session,
     private val authApi: AuthApi,
     private val appScope: CoroutineScope,
+    private val defaultClientId: String = "",
 ) {
 
     private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -51,7 +52,13 @@ class AuthRepository(
     private var pollJob: Job? = null
 
     suspend fun initialize() {
-        val stored = tokenStore.read()
+        var stored = tokenStore.read()
+        if (stored.clientId.isBlank() && defaultClientId.isNotBlank()) {
+            // First launch with a bundled app identity: skip the "paste your
+            // Client ID" step and go straight to connecting the account.
+            tokenStore.saveClient(defaultClientId, null)
+            stored = stored.copy(clientId = defaultClientId)
+        }
         session.update(stored)
         val clientId = stored.clientId.ifBlank { null }
         _state.value = when {

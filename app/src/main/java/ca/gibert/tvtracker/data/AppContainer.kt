@@ -43,6 +43,7 @@ class AppContainer(context: Context) {
         session = session,
         authApi = authApi,
         appScope = scope,
+        defaultClientId = BuildConfig.DEFAULT_TRAKT_CLIENT_ID,
     )
 
     private val traktApi: TraktApi = Retrofit.Builder()

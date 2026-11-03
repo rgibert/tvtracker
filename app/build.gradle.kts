@@ -1,9 +1,30 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
 }
+
+// Optional build-time Trakt Client ID. Client IDs are public app identifiers,
+// not secrets, but keeping it out of source means each build/person can supply
+// their own. Precedence: -PtraktClientId > TRAKT_CLIENT_ID env > local.properties.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+
+val traktClientId = (
+    providers.gradleProperty("traktClientId").orNull
+        ?: providers.environmentVariable("TRAKT_CLIENT_ID").orNull
+        ?: localProperties.getProperty("trakt.clientId")
+        ?: ""
+).trim()
+
+val escapedTraktClientId = traktClientId
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
 
 android {
     namespace = "ca.gibert.tvtracker"
@@ -17,6 +38,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Empty when not supplied at build time; the app then asks for it at
+        // first launch. It can always be changed in Settings.
+        buildConfigField(
+            "String",
+            "DEFAULT_TRAKT_CLIENT_ID",
+            "\"$escapedTraktClientId\"",
+        )
     }
 
     buildTypes {
