@@ -21,9 +21,15 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
 Trakt requires every third-party app to use its own free API key.
 
 1. Sign in at [trakt.tv](https://trakt.tv) and create a new API app at
-   <https://app.trakt.tv/settings/apps/api/new>.
+   <https://app.trakt.tv/settings/apps/api/new>. Trakt now asks you to link a
+   GitHub account before creating your first app.
+   - **Name:** anything, for example `TV Tracker`.
+   - **Redirect URI:** `https://example.com/oauth/callback` (or any HTTPS URL
+     you control). TV Tracker uses Trakt's device-code flow, so this URI is
+     never called. Don't use the old `urn:ietf:wg:oauth:2.0:oob` value; current
+     Trakt guidance advises against out-of-band and `localhost` redirects.
 2. Copy the **Client ID** (a long string of letters and numbers). A client
-   secret is not needed for the current device flow; the field is kept under
+   secret is not needed for the device flow; the field is kept under
    "Advanced" only for older Trakt apps.
 3. Open TV Tracker, paste the Client ID, and tap **Continue**.
 4. Tap **Connect with Trakt**, then enter the short code shown in the app at
