@@ -68,7 +68,7 @@ class TraktRepository(
             api.showProgress(showId, extended = "full", specials = false)
         }
         val seasons = async {
-            api.seasons(showId, extended = "episodes,full")
+            api.seasons(showId, extended = "episodes,full,images")
         }
 
         val detail = buildShowDetail(

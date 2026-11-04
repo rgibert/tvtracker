@@ -20,6 +20,7 @@ data class Images(
     val clearart: List<String> = emptyList(),
     val banner: List<String> = emptyList(),
     val thumb: List<String> = emptyList(),
+    val screenshot: List<String> = emptyList(),
 )
 
 @Serializable
@@ -53,6 +54,7 @@ data class Episode(
     val rating: Double? = null,
     val votes: Int? = null,
     @SerialName("episode_type") val episodeType: String? = null,
+    val images: Images? = null,
     val ids: TraktIds,
 )
 

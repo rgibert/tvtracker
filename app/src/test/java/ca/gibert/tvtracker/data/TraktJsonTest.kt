@@ -183,6 +183,39 @@ class TraktJsonTest {
     }
 
     @Test
+    fun `decodes episode screenshots from season responses`() {
+        val payload = """
+            [
+              {
+                "number": 1,
+                "title": "Season 1",
+                "episodes": [
+                  {
+                    "season": 1,
+                    "number": 1,
+                    "title": "Pilot",
+                    "ids": {"trakt": 101},
+                    "images": {
+                      "screenshot": [
+                        "media.trakt.tv/images/episodes/000/000/101/screenshots/medium/still.jpg.webp"
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val seasons = json.decodeFromString<List<Season>>(payload)
+
+        val still = seasons.single().episodes.single().images?.screenshot?.single()
+        assertEquals(
+            "media.trakt.tv/images/episodes/000/000/101/screenshots/medium/still.jpg.webp",
+            still,
+        )
+    }
+
+    @Test
     fun `round trips a cached show detail`() {
         val detail = ShowDetail(
             show = Show(title = "Test", ids = TraktIds(trakt = 9)),

@@ -51,7 +51,16 @@ internal fun buildShowDetail(
 
     return ShowDetail(
         show = show,
-        nextEpisode = progress.nextEpisode,
+        nextEpisode = progress.nextEpisode?.let { next ->
+            // Progress responses only include the episode skeleton. Prefer the
+            // matching season entry so the next-up card has artwork and details.
+            detailSeasons
+                .asSequence()
+                .flatMap { it.episodes.asSequence() }
+                .firstOrNull { it.episode.ids.trakt == next.ids.trakt }
+                ?.episode
+                ?: next
+        },
         airedEpisodes = progress.aired,
         completedEpisodes = progress.completed,
         seasons = detailSeasons,

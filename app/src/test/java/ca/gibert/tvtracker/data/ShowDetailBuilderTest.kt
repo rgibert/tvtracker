@@ -104,6 +104,28 @@ class ShowDetailBuilderTest {
     }
 
     @Test
+    fun `next episode is enriched from season metadata`() {
+        val withArt = episode(1, 2).copy(
+            images = Images(
+                screenshot = listOf("media.trakt.tv/images/episodes/000/001/002/screenshots/medium/still.jpg.webp"),
+            ),
+        )
+        val progress = ShowProgress(
+            nextEpisode = Episode(season = 1, number = 2, ids = TraktIds(trakt = 102)),
+        )
+
+        val detail = buildShowDetail(
+            show,
+            progress,
+            listOf(season(1, listOf(episode(1, 1), withArt))),
+            fetchedAt = 1L,
+        )
+
+        assertEquals(withArt, detail.nextEpisode)
+        assertEquals(withArt.images, detail.nextEpisode?.images)
+    }
+
+    @Test
     fun `season progress counts take precedence over episode flags`() {
         val seasons = listOf(season(1, listOf(episode(1, 1), episode(1, 2))))
         val progress = ShowProgress(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ import ca.gibert.tvtracker.data.Show
 import ca.gibert.tvtracker.data.ShowDetail
 import ca.gibert.tvtracker.ui.components.CachedBanner
 import ca.gibert.tvtracker.ui.components.EmptyState
+import ca.gibert.tvtracker.ui.components.EpisodeStill
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
@@ -294,59 +296,71 @@ private fun NextEpisodeCard(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = colors.primaryContainer),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = colors.onPrimaryContainer,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "NEXT UP",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onPrimaryContainer,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${episodeCode(next.season, next.number)} · ${
-                    next.title?.takeIf { it.isNotBlank() } ?: "Episode ${next.number}"
-                }",
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.onPrimaryContainer,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            EpisodeStill(
+                episode = next,
+                modifier = Modifier
+                    .width(112.dp)
+                    .aspectRatio(16f / 9f),
             )
-            episodeAirLabel(next)?.let { label ->
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onMarkWatched,
-                enabled = !isSaving,
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = null,
+                        tint = colors.onPrimaryContainer,
                         modifier = Modifier.size(18.dp),
                     )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "NEXT UP",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onPrimaryContainer,
+                    )
                 }
-                Spacer(Modifier.width(6.dp))
-                Text("Mark watched")
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "${episodeCode(next.season, next.number)} · ${
+                        next.title?.takeIf { it.isNotBlank() } ?: "Episode ${next.number}"
+                    }",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onPrimaryContainer,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                episodeAirLabel(next)?.let { label ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onPrimaryContainer.copy(alpha = 0.8f),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = onMarkWatched,
+                    enabled = !isSaving,
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text("Mark watched")
+                }
             }
         }
     }
@@ -396,7 +410,15 @@ private fun EpisodeRow(
             onCheckedChange = null,
             enabled = enabled && aired,
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
+        EpisodeStill(
+            episode = item,
+            modifier = Modifier
+                .width(96.dp)
+                .aspectRatio(16f / 9f),
+            cornerRadius = 6.dp,
+        )
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 text = "${episodeCode(item.season, item.number)} · ${
