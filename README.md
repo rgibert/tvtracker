@@ -85,8 +85,9 @@ Run the checks with:
 ### GitHub Actions
 
 `.github/workflows/build.yml` runs only when a version tag is pushed (`v*`). It
-builds a debug APK and a release APK, runs the unit tests and lint, and uploads
-the APKs to the **Artifacts** section of the workflow run.
+builds a debug APK and a release APK, runs the unit tests and lint, uploads the
+APKs to the workflow run's **Artifacts**, and publishes them on a GitHub
+**Release** for the tag.
 
 The tag drives the app version: `v0.1.0` becomes `versionName` `0.1.0`, and
 `versionCode` is derived as `major × 1,000,000 + minor × 1,000 + patch`
@@ -129,6 +130,10 @@ Then push a tag:
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+The release assets are named `tvtracker-<version>-debug.apk` and
+`tvtracker-<version>.apk` (`-unsigned.apk` when no signing secrets are set).
+Re-running the workflow for the same tag replaces the existing assets.
 
 Without signing secrets, the release artifact is unsigned
 (`app-release-unsigned.apk`) and only useful as a build check. Losing the
