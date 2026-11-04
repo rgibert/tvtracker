@@ -1,6 +1,7 @@
 package ca.gibert.tvtracker.ui.watch
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -139,8 +140,12 @@ fun WatchScreen(
                             top = 8.dp,
                             bottom = 24.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        item(key = "header") {
+                            WatchHeader(items = state.items)
+                        }
+
                         if (state.showingCached) {
                             item(key = "cached-banner") {
                                 CachedBanner(lastUpdated = state.lastUpdated)
@@ -188,6 +193,43 @@ fun WatchScreen(
 }
 
 @Composable
+private fun WatchHeader(items: List<WatchItem>) {
+    val upNext = items.count { it is WatchItem.UpNext }
+    val watchlisted = items.count { it is WatchItem.Watchlisted }
+    val subtitle = when {
+        upNext > 0 && watchlisted > 0 -> "$upNext ready to continue · $watchlisted on your watchlist"
+        upNext > 0 -> if (upNext == 1) {
+            "1 show ready for its next episode"
+        } else {
+            "$upNext shows ready for their next episode"
+        }
+        watchlisted > 0 -> if (watchlisted == 1) {
+            "1 show waiting on your watchlist"
+        } else {
+            "$watchlisted shows waiting on your watchlist"
+        }
+        else -> "Everything is up to date"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 8.dp),
+    ) {
+        Text(
+            text = "To Watch",
+            style = MaterialTheme.typography.headlineLarge,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 private fun WatchCard(
     item: WatchItem,
     isMarking: Boolean,
@@ -201,7 +243,12 @@ private fun WatchCard(
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainer),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colors.outlineVariant.copy(alpha = 0.45f),
+        ),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -210,8 +257,9 @@ private fun WatchCard(
             PosterImage(
                 show = show,
                 modifier = Modifier
-                    .width(64.dp)
-                    .height(96.dp),
+                    .width(66.dp)
+                    .height(99.dp),
+                cornerRadius = 12.dp,
             )
 
             Spacer(Modifier.width(12.dp))
@@ -225,8 +273,10 @@ private fun WatchCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (item is WatchItem.Watchlisted) {
-                        Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(8.dp))
+                    if (item is WatchItem.UpNext) {
+                        Pill("Next up", emphasis = true)
+                    } else {
                         Pill("Watchlist")
                     }
                 }
@@ -336,7 +386,7 @@ private fun ProgressBar(completed: Int, aired: Int) {
         progress = { fraction },
         modifier = Modifier
             .fillMaxWidth()
-            .height(4.dp),
+            .height(5.dp),
         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
     )
     Spacer(Modifier.height(4.dp))

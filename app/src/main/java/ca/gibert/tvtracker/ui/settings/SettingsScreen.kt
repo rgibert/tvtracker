@@ -1,6 +1,8 @@
 package ca.gibert.tvtracker.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -31,7 +34,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -47,12 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ca.gibert.tvtracker.BuildConfig
@@ -105,7 +109,10 @@ fun SettingsScreen(
                     onClick = { confirmForgetApp = true },
                     trailing = "Change",
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Outlined.Logout,
                     title = "Disconnect account",
@@ -132,7 +139,10 @@ fun SettingsScreen(
                     subtitle = "Version ${BuildConfig.VERSION_NAME} · shows only",
                     showChevron = false,
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.OpenInNew,
                     title = "Open Trakt",
@@ -140,7 +150,10 @@ fun SettingsScreen(
                     onClick = { context.openUrl(TRAKT_URL) },
                     showChevron = false,
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
                 SettingsRow(
                     icon = Icons.AutoMirrored.Filled.OpenInNew,
                     title = "Manage API apps on Trakt",
@@ -207,73 +220,92 @@ private fun ProfileCard(
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainer),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colors.outlineVariant.copy(alpha = 0.45f),
+        ),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            colors.primaryContainer.copy(alpha = 0.72f),
+                            colors.surfaceContainerLow,
+                        ),
+                    ),
+                ),
         ) {
-            Avatar(profile)
+            Row(
+                modifier = Modifier.padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(profile)
 
-            Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(14.dp))
 
-            Column(Modifier.weight(1f)) {
-                when {
-                    profile != null -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = profile.name?.takeIf { it.isNotBlank() }
-                                    ?: profile.username,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (profile.vip) {
-                                Spacer(Modifier.width(8.dp))
-                                Pill("VIP", emphasis = true)
+                Column(Modifier.weight(1f)) {
+                    when {
+                        profile != null -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = profile.name?.takeIf { it.isNotBlank() }
+                                        ?: profile.username,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                if (profile.vip) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Pill("VIP", emphasis = true)
+                                }
                             }
-                        }
-                        Text(
-                            text = "@${profile.username}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.onSurfaceVariant,
-                        )
-                    }
-
-                    isLoading -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Spacer(Modifier.width(10.dp))
                             Text(
-                                text = "Loading your Trakt profile…",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    else -> {
-                        Text(
-                            text = "Trakt account connected",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        if (error != null) {
-                            Text(
-                                text = error,
+                                text = "@${profile.username}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.onSurfaceVariant,
                             )
                         }
+
+                        isLoading -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = "Loading your Trakt profile…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colors.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        else -> {
+                            Text(
+                                text = "Trakt account connected",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            if (error != null) {
+                                Text(
+                                    text = error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colors.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
-            }
 
-            if (error != null && !isLoading) {
-                TextButton(onClick = onRetry) {
-                    Text("Retry")
+                if (error != null && !isLoading) {
+                    TextButton(onClick = onRetry) {
+                        Text("Retry")
+                    }
                 }
             }
         }
@@ -286,16 +318,17 @@ private fun Avatar(profile: User?) {
     val avatar = profile?.images?.avatar?.full
     Box(
         modifier = Modifier
-            .size(52.dp)
+            .size(56.dp)
             .clip(CircleShape)
-            .background(colors.primaryContainer),
+            .background(colors.primaryContainer)
+            .border(2.dp, colors.surface.copy(alpha = 0.65f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Outlined.Person,
             contentDescription = null,
             tint = colors.onPrimaryContainer,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(30.dp),
         )
         if (!avatar.isNullOrBlank()) {
             AsyncImage(
@@ -315,15 +348,20 @@ private fun SettingsSection(
 ) {
     Column {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp),
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp),
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+            ),
         ) {
             Column { content() }
         }
@@ -351,16 +389,30 @@ private fun SettingsRow(
                     Modifier
                 },
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (enabled) colors.primary else colors.onSurfaceVariant,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(Modifier.width(14.dp))
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (enabled) {
+                        colors.primaryContainer.copy(alpha = 0.65f)
+                    } else {
+                        colors.surfaceContainerHigh
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (enabled) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 text = title,

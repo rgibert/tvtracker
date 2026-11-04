@@ -1,5 +1,7 @@
 package ca.gibert.tvtracker.ui.detail
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
@@ -27,12 +30,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -41,11 +44,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ca.gibert.tvtracker.data.AppContainer
@@ -60,6 +66,7 @@ import ca.gibert.tvtracker.ui.components.EpisodeStill
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
+import ca.gibert.tvtracker.ui.components.ShowBackdrop
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatShortDate
 import ca.gibert.tvtracker.util.isAired
@@ -144,12 +151,12 @@ private fun DetailContent(
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
         item(key = "header") {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                 if (showingCached) {
                     CachedBanner(lastUpdated = detail.fetchedAt)
                     Spacer(Modifier.height(12.dp))
                 }
-                ShowHeader(detail)
+                ShowHero(detail)
             }
         }
 
@@ -166,7 +173,7 @@ private fun DetailContent(
                             ?: DetailEpisode(episode = next, completed = false)
                         onToggleEpisode(target)
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
         }
@@ -184,10 +191,11 @@ private fun DetailContent(
 
         item(key = "seasons") {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(detail.seasons, key = { it.number }) { item ->
+                    val colors = MaterialTheme.colorScheme
                     FilterChip(
                         selected = item.number == selectedSeason,
                         onClick = { onSelectSeason(item.number) },
@@ -197,6 +205,14 @@ private fun DetailContent(
                                     ?: "Season ${item.number}",
                             )
                         },
+                        shape = CircleShape,
+                        border = null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = colors.surfaceContainerHigh,
+                            labelColor = colors.onSurfaceVariant,
+                            selectedContainerColor = colors.primary,
+                            selectedLabelColor = colors.onPrimary,
+                        ),
                     )
                 }
             }
@@ -222,66 +238,124 @@ private fun DetailContent(
 }
 
 @Composable
-private fun ShowHeader(detail: ShowDetail) {
+private fun ShowHero(detail: ShowDetail) {
     val show = detail.show
     val colors = MaterialTheme.colorScheme
+    val textOnHero = Color.White
 
-    Row(Modifier.fillMaxWidth()) {
-        PosterImage(
-            show = show,
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colors.outlineVariant.copy(alpha = 0.45f),
+        ),
+    ) {
+        Box(
             modifier = Modifier
-                .width(96.dp)
-                .height(144.dp),
-            cornerRadius = 10.dp,
-        )
-
-        Spacer(Modifier.width(14.dp))
-
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = show.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                .fillMaxWidth()
+                .height(238.dp),
+        ) {
+            ShowBackdrop(
+                show = show,
+                modifier = Modifier.matchParentSize(),
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = showMeta(show),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant,
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.35f to Color.Black.copy(alpha = 0.18f),
+                            1f to Color.Black.copy(alpha = 0.82f),
+                        ),
+                    ),
             )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                PosterImage(
+                    show = show,
+                    modifier = Modifier
+                        .width(92.dp)
+                        .height(138.dp),
+                    cornerRadius = 12.dp,
+                )
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(bottom = 2.dp),
+                ) {
+                    Text(
+                        text = show.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = textOnHero,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = showMeta(show),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textOnHero.copy(alpha = 0.82f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        Column(Modifier.padding(16.dp)) {
             if (!show.overview.isNullOrBlank()) {
-                Spacer(Modifier.height(10.dp))
                 Text(
                     text = show.overview,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.onSurfaceVariant,
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(16.dp))
             }
+
+            val fraction = if (detail.airedEpisodes > 0) {
+                (detail.completedEpisodes.toFloat() / detail.airedEpisodes.toFloat())
+                    .coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${detail.completedEpisodes} of ${detail.airedEpisodes} aired episodes watched",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "${(fraction * 100).roundToInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.primary,
+                )
+            }
+            Spacer(Modifier.height(7.dp))
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                strokeCap = StrokeCap.Round,
+            )
         }
     }
-
-    Spacer(Modifier.height(16.dp))
-
-    val fraction = if (detail.airedEpisodes > 0) {
-        (detail.completedEpisodes.toFloat() / detail.airedEpisodes.toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    LinearProgressIndicator(
-        progress = { fraction },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp),
-        strokeCap = StrokeCap.Round,
-    )
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text = "${detail.completedEpisodes} of ${detail.airedEpisodes} aired episodes watched",
-        style = MaterialTheme.typography.labelMedium,
-        color = colors.onSurfaceVariant,
-    )
 }
 
 @Composable
@@ -294,7 +368,12 @@ private fun NextEpisodeCard(
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = colors.primaryContainer),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colors.outlineVariant.copy(alpha = 0.25f),
+        ),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -402,7 +481,7 @@ private fun EpisodeRow(
                 role = Role.Checkbox,
                 onValueChange = { onToggle() },
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
@@ -414,16 +493,20 @@ private fun EpisodeRow(
         EpisodeStill(
             episode = item,
             modifier = Modifier
-                .width(96.dp)
+                .width(100.dp)
                 .aspectRatio(16f / 9f),
-            cornerRadius = 6.dp,
+            cornerRadius = 8.dp,
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = "${episodeCode(item.season, item.number)} · ${
-                    item.title?.takeIf { it.isNotBlank() } ?: "Episode ${item.number}"
-                }",
+                text = episodeCode(item.season, item.number),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (aired) colors.primary else colors.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(1.dp))
+            Text(
+                text = item.title?.takeIf { it.isNotBlank() } ?: "Episode ${item.number}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (aired) colors.onSurface else colors.onSurfaceVariant,
                 maxLines = 2,

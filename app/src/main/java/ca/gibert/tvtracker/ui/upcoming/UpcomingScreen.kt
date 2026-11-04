@@ -1,6 +1,7 @@
 package ca.gibert.tvtracker.ui.upcoming
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +46,6 @@ import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
-import ca.gibert.tvtracker.ui.components.SectionHeader
 import ca.gibert.tvtracker.ui.rememberIs24HourClock
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatRelativeDay
@@ -134,6 +134,10 @@ fun UpcomingScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        item(key = "header") {
+                            UpcomingHeader(items = state.items)
+                        }
+
                         if (state.showingCached) {
                             item(key = "cached-banner") {
                                 CachedBanner(lastUpdated = state.lastUpdated)
@@ -174,21 +178,50 @@ fun UpcomingScreen(
 }
 
 @Composable
-private fun DayHeader(date: LocalDate, count: Int) {
-    SectionHeader(
-        title = formatRelativeDay(date),
-        trailing = buildString {
-            append(
-                date.format(
-                    DateTimeFormatter.ofPattern("MMM d", Locale.getDefault()),
-                ),
-            )
-            append(" · ")
-            append(count)
-            append(if (count == 1) " episode" else " episodes")
-        },
-        modifier = Modifier.padding(top = 8.dp),
+private fun UpcomingHeader(items: List<CalendarItem>) {
+    val showCount = items.map { it.show.ids.trakt }.distinct().size
+    Text(
+        text = "Coming Up",
+        style = MaterialTheme.typography.headlineLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp),
     )
+    Text(
+        text = when {
+            items.isEmpty() -> "Nothing scheduled in the next 14 days"
+            showCount == 1 -> "1 episode from 1 show in the next 14 days"
+            else -> "${items.size} episodes from $showCount shows in the next 14 days"
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 8.dp),
+    )
+}
+
+@Composable
+private fun DayHeader(date: LocalDate, count: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = formatRelativeDay(date),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = date.format(DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Pill(text = "$count ${if (count == 1) "episode" else "episodes"}")
+    }
 }
 
 @Composable
@@ -203,17 +236,23 @@ private fun UpcomingRow(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainer),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
+        border = BorderStroke(
+            width = 1.dp,
+            color = colors.outlineVariant.copy(alpha = 0.45f),
+        ),
     ) {
         Row(
-            modifier = Modifier.padding(10.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
             PosterImage(
                 show = item.show,
                 modifier = Modifier
-                    .width(48.dp)
-                    .height(72.dp),
+                    .width(50.dp)
+                    .height(75.dp),
+                cornerRadius = 10.dp,
             )
 
             Spacer(Modifier.width(12.dp))
@@ -221,11 +260,11 @@ private fun UpcomingRow(
             Column(Modifier.weight(1f)) {
                 Text(
                     text = item.show.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = "${episodeCode(episode.season, episode.number)} · ${
                         episode.title?.takeIf { it.isNotBlank() } ?: "Episode ${episode.number}"
@@ -235,7 +274,7 @@ private fun UpcomingRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -255,11 +294,7 @@ private fun UpcomingRow(
 
             Spacer(Modifier.width(8.dp))
 
-            Text(
-                text = time,
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.onSurface,
-            )
+            Pill(text = time, emphasis = true)
         }
     }
 }

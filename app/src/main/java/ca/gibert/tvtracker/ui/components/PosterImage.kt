@@ -55,8 +55,43 @@ fun PosterImage(
 
         if (!url.isNullOrBlank()) {
             AsyncImage(
-                model = imageUrl(url),
+                model = traktImageUrl(url),
                 contentDescription = show?.title?.let { "Poster for $it" },
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+fun ShowBackdrop(
+    show: Show?,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val url = show?.images?.fanart?.firstOrNull()
+        ?: show?.images?.thumb?.firstOrNull()
+
+    Box(
+        modifier = modifier.background(
+            Brush.linearGradient(
+                listOf(colors.primaryContainer, colors.surfaceContainerHigh),
+            ),
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.LiveTv,
+            contentDescription = null,
+            tint = colors.onPrimaryContainer.copy(alpha = 0.3f),
+            modifier = Modifier.size(64.dp),
+        )
+
+        if (!url.isNullOrBlank()) {
+            AsyncImage(
+                model = traktImageUrl(url),
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -96,7 +131,7 @@ fun EpisodeStill(
 
         if (!url.isNullOrBlank()) {
             AsyncImage(
-                model = imageUrl(url),
+                model = traktImageUrl(url),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
@@ -105,7 +140,7 @@ fun EpisodeStill(
     }
 }
 
-private fun imageUrl(url: String): String = when {
+internal fun traktImageUrl(url: String): String = when {
     url.startsWith("http://") || url.startsWith("https://") -> url
     url.startsWith("//") -> "https:$url"
     url.startsWith("/") -> "https://media.trakt.tv$url"
