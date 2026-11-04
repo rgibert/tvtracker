@@ -88,6 +88,11 @@ Run the checks with:
 builds a debug APK and a release APK, runs the unit tests and lint, and uploads
 the APKs to the **Artifacts** section of the workflow run.
 
+The tag drives the app version: `v0.1.0` becomes `versionName` `0.1.0`, and
+`versionCode` is derived as `major × 1,000,000 + minor × 1,000 + patch`
+(`v0.1.0` → `1000`). Local builds default to `0.1.0`; override with
+`-PappVersionName=1.2.3` and `-PappVersionCode=1002003` if needed.
+
 Add a repository secret named `TRAKT_CLIENT_ID` so CI builds skip the Client ID
 setup screen. Without it, the APK still works but asks for a Client ID.
 

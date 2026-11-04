@@ -28,6 +28,28 @@ val escapedTraktClientId = traktClientId
 
 val releaseKeystorePath = providers.environmentVariable("TRAKT_KEYSTORE_FILE").orNull
 
+fun versionCodeFor(versionName: String): Int {
+    val match = Regex("""^(\d+)\.(\d+)\.(\d+)""").find(versionName)
+        ?: throw GradleException(
+            "appVersionName \"$versionName\" must start with major.minor.patch",
+        )
+    val (major, minor, patch) = match.destructured
+    return major.toInt() * 1_000_000 + minor.toInt() * 1_000 + patch.toInt()
+}
+
+val appVersionName = (
+    providers.gradleProperty("appVersionName").orNull
+        ?: providers.environmentVariable("APP_VERSION_NAME").orNull
+        ?: "0.1.0"
+).trim().removePrefix("v")
+
+val appVersionCode = (
+    providers.gradleProperty("appVersionCode").orNull
+        ?: providers.environmentVariable("APP_VERSION_CODE").orNull
+)
+    ?.toIntOrNull()
+    ?: versionCodeFor(appVersionName)
+
 android {
     namespace = "ca.gibert.tvtracker"
     compileSdk = 35
@@ -36,8 +58,8 @@ android {
         applicationId = "ca.gibert.tvtracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
