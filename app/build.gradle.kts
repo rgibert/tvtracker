@@ -26,6 +26,8 @@ val escapedTraktClientId = traktClientId
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
+val releaseKeystorePath = providers.environmentVariable("TRAKT_KEYSTORE_FILE").orNull
+
 android {
     namespace = "ca.gibert.tvtracker"
     compileSdk = 35
@@ -48,6 +50,19 @@ android {
         )
     }
 
+    signingConfigs {
+        // Release signing is optional. CI supplies these environment variables
+        // from repository secrets; without them the release APK is unsigned.
+        if (!releaseKeystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = providers.environmentVariable("TRAKT_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("TRAKT_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("TRAKT_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -56,6 +71,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

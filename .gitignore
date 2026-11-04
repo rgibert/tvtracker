@@ -12,4 +12,6 @@
 local.properties
 *.apk
 *.aab
+*.jks
+*.keystore
 /kotlin-js-store

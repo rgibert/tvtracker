@@ -82,6 +82,63 @@ Run the checks with:
 ./gradlew :app:testDebugUnitTest :app:lintDebug
 ```
 
+### GitHub Actions
+
+`.github/workflows/build.yml` runs only when a version tag is pushed (`v*`). It
+builds a debug APK and a release APK, runs the unit tests and lint, and uploads
+the APKs to the **Artifacts** section of the workflow run.
+
+Add a repository secret named `TRAKT_CLIENT_ID` so CI builds skip the Client ID
+setup screen. Without it, the APK still works but asks for a Client ID.
+
+The debug APK is installable as-is, signed with the Android debug key. To sign
+the release APK, create a keystore once:
+
+```sh
+keytool -genkeypair -v \
+  -keystore release.keystore \
+  -alias tvtracker \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=TV Tracker" \
+  -storepass 'your-password' \
+  -keypass 'your-password'
+```
+
+Keep `release.keystore` backed up and out of Git (it is ignored). Then add these
+repository secrets under **Settings → Secrets and variables → Actions**:
+
+- `TRAKT_KEYSTORE_BASE64` – base64-encoded keystore
+- `TRAKT_KEYSTORE_PASSWORD` – the `-storepass` value
+- `TRAKT_KEY_ALIAS` – `tvtracker` in the example above
+- `TRAKT_KEY_PASSWORD` – the `-keypass` value
+
+On macOS, copy the base64 keystore with:
+
+```sh
+base64 -i release.keystore | pbcopy
+```
+
+Then push a tag:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Without signing secrets, the release artifact is unsigned
+(`app-release-unsigned.apk`) and only useful as a build check. Losing the
+keystore prevents updating an installed release build.
+
+To build a signed release locally, point Gradle at the same keystore:
+
+```sh
+TRAKT_KEYSTORE_FILE="$PWD/release.keystore" \
+TRAKT_KEYSTORE_PASSWORD='your-password' \
+TRAKT_KEY_ALIAS=tvtracker \
+TRAKT_KEY_PASSWORD='your-password' \
+./gradlew :app:assembleRelease
+```
+
 ## Notes
 
 - Package name: `ca.gibert.tvtracker`. Minimum Android version: 8.0 (API 26).
