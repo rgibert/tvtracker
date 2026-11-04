@@ -1,6 +1,5 @@
 package ca.gibert.tvtracker.ui.auth
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,8 +27,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -68,6 +64,8 @@ import ca.gibert.tvtracker.data.AuthState
 import ca.gibert.tvtracker.data.DeviceLoginState
 import ca.gibert.tvtracker.ui.copyText
 import ca.gibert.tvtracker.ui.openUrl
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -89,18 +87,9 @@ fun AuthScreen(
     val state = loggedOutState
     val showSetup = state is AuthState.NeedsClientId || editingClientId
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                        MaterialTheme.colorScheme.background,
-                    ),
-                ),
-            ),
-    ) {
+    val zen = LocalZenColors.current
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -111,28 +100,29 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(24.dp))
-            Box(
-                modifier = Modifier
-                    .size(82.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary,
-                            ),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
+            GlassSurface(
+                modifier = Modifier.size(84.dp),
+                shape = RoundedCornerShape(28.dp),
+                brush = zen.logoBrush,
+                strong = true,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.LiveTv,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(44.dp),
+                    tint = zen.onAccent,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(44.dp),
                 )
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = "YOUR SHOWS, SIMPLIFIED",
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = "TV Tracker",
                 style = MaterialTheme.typography.headlineLarge,
@@ -197,16 +187,10 @@ private fun SetupCard(
     var showAdvanced by rememberSaveable { mutableStateOf(false) }
     var secretVisible by rememberSaveable { mutableStateOf(false) }
 
-    Card(
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-        ),
+        strong = true,
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
@@ -318,16 +302,11 @@ private fun ConnectCard(
     onOpenVerification: (String) -> Unit,
     onCopyCode: (String) -> Unit,
 ) {
-    Card(
+    val zen = LocalZenColors.current
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-        ),
+        strong = true,
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
@@ -347,7 +326,7 @@ private fun ConnectCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(zen.mutedFill)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -462,6 +441,7 @@ private fun DeviceCodeCard(
     onCopyCode: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val zen = LocalZenColors.current
     var remainingMillis by remember(state.expiresAt) {
         mutableLongStateOf((state.expiresAt - System.currentTimeMillis()).coerceAtLeast(0))
     }
@@ -474,9 +454,9 @@ private fun DeviceCodeCard(
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        GlassSurface(
+            brush = zen.iridescentBrush,
+            strong = true,
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -487,6 +467,7 @@ private fun DeviceCodeCard(
                 Text(
                     text = "Enter this code on Trakt",
                     style = MaterialTheme.typography.labelLarge,
+                    color = zen.onAccent.copy(alpha = 0.72f),
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
@@ -496,6 +477,7 @@ private fun DeviceCodeCard(
                         letterSpacing = 6.sp,
                     ),
                     fontFamily = FontFamily.Monospace,
+                    color = zen.onAccent,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(8.dp))
@@ -505,6 +487,7 @@ private fun DeviceCodeCard(
                         else -> "Expires in ${formatCountdown(remainingMillis)}"
                     },
                     style = MaterialTheme.typography.labelMedium,
+                    color = zen.onAccent.copy(alpha = 0.62f),
                 )
             }
         }
@@ -517,6 +500,9 @@ private fun DeviceCodeCard(
             OutlinedButton(
                 onClick = { onCopyCode(state.userCode) },
                 modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 12.dp,
+                ),
             ) {
                 Icon(
                     imageVector = Icons.Filled.ContentCopy,
@@ -529,6 +515,9 @@ private fun DeviceCodeCard(
             Button(
                 onClick = { onOpenVerification(state.verificationUrl) },
                 modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 12.dp,
+                ),
             ) {
                 Text("Open Trakt")
             }

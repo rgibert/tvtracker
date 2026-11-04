@@ -1,6 +1,5 @@
 package ca.gibert.tvtracker.ui.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,15 +27,12 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +59,8 @@ import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.User
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.openUrl
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import coil.compose.AsyncImage
 
 private const val TRAKT_URL = "https://trakt.tv"
@@ -218,94 +215,85 @@ private fun ProfileCard(
     onRetry: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    Card(
+    val zen = LocalZenColors.current
+
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.45f),
-        ),
+        brush = zen.iridescentBrush,
+        strong = true,
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            colors.primaryContainer.copy(alpha = 0.72f),
-                            colors.surfaceContainerLow,
-                        ),
-                    ),
-                ),
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Avatar(profile)
+            Avatar(profile)
 
-                Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(14.dp))
 
-                Column(Modifier.weight(1f)) {
-                    when {
-                        profile != null -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = profile.name?.takeIf { it.isNotBlank() }
-                                        ?: profile.username,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-                                if (profile.vip) {
-                                    Spacer(Modifier.width(8.dp))
-                                    Pill("VIP", emphasis = true)
-                                }
-                            }
+            Column(Modifier.weight(1f)) {
+                when {
+                    profile != null -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "@${profile.username}",
+                                text = profile.name?.takeIf { it.isNotBlank() }
+                                    ?: profile.username,
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                                color = zen.onAccent,
+                            )
+                            if (profile.vip) {
+                                Spacer(Modifier.width(8.dp))
+                                Pill("VIP")
+                            }
+                        }
+                        Text(
+                            text = "@${profile.username}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = zen.onAccent.copy(alpha = 0.64f),
+                        )
+                    }
+
+                    isLoading -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = zen.onAccent,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "Loading your Trakt profile…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = zen.onAccent.copy(alpha = 0.72f),
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Text(
+                            text = "Trakt account connected",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = zen.onAccent,
+                        )
+                        if (error != null) {
+                            Text(
+                                text = error,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = colors.onSurfaceVariant,
+                                color = zen.onAccent.copy(alpha = 0.64f),
                             )
-                        }
-
-                        isLoading -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text(
-                                    text = "Loading your Trakt profile…",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colors.onSurfaceVariant,
-                                )
-                            }
-                        }
-
-                        else -> {
-                            Text(
-                                text = "Trakt account connected",
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            if (error != null) {
-                                Text(
-                                    text = error,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = colors.onSurfaceVariant,
-                                )
-                            }
                         }
                     }
                 }
+            }
 
-                if (error != null && !isLoading) {
-                    TextButton(onClick = onRetry) {
-                        Text("Retry")
-                    }
+            if (error != null && !isLoading) {
+                TextButton(onClick = onRetry) {
+                    Text("Retry", color = colors.onSurface)
                 }
             }
         }
@@ -314,20 +302,20 @@ private fun ProfileCard(
 
 @Composable
 private fun Avatar(profile: User?) {
-    val colors = MaterialTheme.colorScheme
+    val zen = LocalZenColors.current
     val avatar = profile?.images?.avatar?.full
     Box(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(colors.primaryContainer)
-            .border(2.dp, colors.surface.copy(alpha = 0.65f), CircleShape),
+            .background(zen.logoBrush)
+            .border(2.dp, zen.glassBorderStrong, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Outlined.Person,
             contentDescription = null,
-            tint = colors.onPrimaryContainer,
+            tint = zen.onAccent,
             modifier = Modifier.size(30.dp),
         )
         if (!avatar.isNullOrBlank()) {
@@ -350,18 +338,14 @@ private fun SettingsSection(
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp),
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 6.dp, bottom = 8.dp),
         )
-        Surface(
+        GlassSurface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-            ),
+            strong = true,
         ) {
             Column { content() }
         }
@@ -379,6 +363,7 @@ private fun SettingsRow(
     showChevron: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
+    val zen = LocalZenColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -398,17 +383,22 @@ private fun SettingsRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     if (enabled) {
-                        colors.primaryContainer.copy(alpha = 0.65f)
+                        zen.logoBrush
                     } else {
-                        colors.surfaceContainerHigh
+                        androidx.compose.ui.graphics.SolidColor(colors.surfaceContainerHigh)
                     },
+                )
+                .border(
+                    1.dp,
+                    if (enabled) zen.glassBorder else colors.outlineVariant.copy(alpha = 0.35f),
+                    RoundedCornerShape(12.dp),
                 ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                tint = if (enabled) zen.onAccent else colors.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }

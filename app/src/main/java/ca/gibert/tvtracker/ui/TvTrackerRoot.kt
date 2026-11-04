@@ -1,20 +1,25 @@
 package ca.gibert.tvtracker.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -22,27 +27,18 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +54,10 @@ import ca.gibert.tvtracker.data.AuthState
 import ca.gibert.tvtracker.ui.auth.AuthScreen
 import ca.gibert.tvtracker.ui.detail.ShowDetailScreen
 import ca.gibert.tvtracker.ui.settings.SettingsScreen
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
+import ca.gibert.tvtracker.ui.theme.ZenBackground
+import ca.gibert.tvtracker.ui.theme.ZenIconButton
 import ca.gibert.tvtracker.ui.upcoming.UpcomingScreen
 import ca.gibert.tvtracker.ui.watch.WatchScreen
 
@@ -86,15 +86,17 @@ private val tabs = listOf(
 fun TvTrackerRoot(container: AppContainer) {
     val authState by container.authRepository.state.collectAsStateWithLifecycle()
 
-    when (val state = authState) {
-        AuthState.Loading -> LoadingScreen()
-        AuthState.NeedsClientId -> AuthScreen(container = container, loggedOut = null)
-        is AuthState.LoggedOut -> AuthScreen(container = container, loggedOut = state)
-        is AuthState.LoggedIn -> MainScaffold(container = container)
+    Box(Modifier.fillMaxSize()) {
+        ZenBackground()
+        when (val state = authState) {
+            AuthState.Loading -> LoadingScreen()
+            AuthState.NeedsClientId -> AuthScreen(container = container, loggedOut = null)
+            is AuthState.LoggedOut -> AuthScreen(container = container, loggedOut = state)
+            is AuthState.LoggedIn -> MainScaffold(container = container)
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScaffold(container: AppContainer) {
     val navController = rememberNavController()
@@ -103,101 +105,29 @@ private fun MainScaffold(container: AppContainer) {
     val isTab = tabs.any { it.route == currentRoute }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    AppTopBarTitle(isTab = isTab, currentRoute = currentRoute)
-                },
-                navigationIcon = {
-                    if (!isTab && currentRoute != null) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (isTab) {
-                        FilledTonalIconButton(
-                            onClick = { navController.navigate(Routes.SETTINGS) },
-                            modifier = Modifier
-                                .padding(end = 12.dp)
-                                .size(40.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Settings",
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+            ZenTopBar(
+                isTab = isTab,
+                currentRoute = currentRoute,
+                onBack = { navController.popBackStack() },
+                onSettings = { navController.navigate(Routes.SETTINGS) },
             )
         },
         bottomBar = {
             if (isTab) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                        ),
-                    ) {
-                        NavigationBar(
-                            modifier = Modifier.height(76.dp),
-                            containerColor = Color.Transparent,
-                            tonalElevation = 0.dp,
-                            windowInsets = WindowInsets(0, 0, 0, 0),
-                        ) {
-                            tabs.forEach { tab ->
-                                NavigationBarItem(
-                                    selected = currentRoute == tab.route,
-                                    onClick = {
-                                        navController.navigate(tab.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    icon = {
-                                        Icon(
-                                            imageVector = tab.icon,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    label = { Text(tab.label) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    ),
-                                )
+                ZenBottomBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                    }
-                }
+                    },
+                )
             }
         },
     ) { innerPadding ->
@@ -247,62 +177,189 @@ private fun MainScaffold(container: AppContainer) {
 }
 
 @Composable
-private fun AppTopBarTitle(isTab: Boolean, currentRoute: String?) {
-    if (isTab) {
-        val colors = MaterialTheme.colorScheme
-        val subtitle = if (currentRoute == Routes.UPCOMING) "Next 14 days" else "Your queue"
+private fun ZenTopBar(
+    isTab: Boolean,
+    currentRoute: String?,
+    onBack: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(colors.primary, colors.tertiary),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isTab) {
+            BrandMark()
+        } else {
+            ZenIconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Outlined.LiveTv,
-                    contentDescription = null,
-                    tint = colors.onPrimary,
-                    modifier = Modifier.size(19.dp),
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = "TV Tracker",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
-    } else {
-        Text(
-            text = when (currentRoute) {
-                Routes.SETTINGS -> "Settings"
-                Routes.SHOW -> "Show details"
-                else -> "TV Tracker"
-            },
-            style = MaterialTheme.typography.titleLarge,
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = if (isTab) {
+                    "TV Tracker"
+                } else {
+                    when (currentRoute) {
+                        Routes.SETTINGS -> "Settings"
+                        Routes.SHOW -> "Show details"
+                        else -> "TV Tracker"
+                    }
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.onSurface,
+                maxLines = 1,
+            )
+            Text(
+                text = if (isTab) {
+                    if (currentRoute == Routes.UPCOMING) "Next 14 days" else "Your queue"
+                } else {
+                    if (currentRoute == Routes.SETTINGS) {
+                        "Account & saved data"
+                    } else {
+                        "Episodes & progress"
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceVariant,
+            )
+        }
+
+        if (isTab) {
+            ZenIconButton(onClick = onSettings) {
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = "Settings",
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrandMark() {
+    val zen = LocalZenColors.current
+    GlassSurface(
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(14.dp),
+        brush = zen.logoBrush,
+        strong = true,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.LiveTv,
+            contentDescription = null,
+            tint = zen.onAccent,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(21.dp),
         )
+    }
+}
+
+@Composable
+private fun ZenBottomBar(
+    currentRoute: String?,
+    onNavigate: (String) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 22.dp, vertical = 10.dp),
+    ) {
+        GlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(66.dp),
+            shape = CircleShape,
+            strong = true,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEach { tab ->
+                    ZenNavItem(
+                        tab = tab,
+                        selected = currentRoute == tab.route,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate(tab.route) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.ZenNavItem(
+    tab: TabDestination,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val zen = LocalZenColors.current
+    val colors = MaterialTheme.colorScheme
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) zen.onAccent else colors.onSurfaceVariant,
+        label = "navItemColor",
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(CircleShape)
+            .then(
+                if (selected) {
+                    Modifier
+                        .background(zen.iridescentBrush)
+                        .border(1.dp, zen.glassBorderStrong, CircleShape)
+                } else {
+                    Modifier
+                },
+            )
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = tab.icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(19.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = tab.label,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+                maxLines = 1,
+            )
+        }
     }
 }
 
 @Composable
 private fun LoadingScreen() {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)

@@ -1,7 +1,7 @@
 package ca.gibert.tvtracker.ui.detail
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,13 +20,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -67,6 +68,8 @@ import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
 import ca.gibert.tvtracker.ui.components.ShowBackdrop
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatShortDate
 import ca.gibert.tvtracker.util.isAired
@@ -196,6 +199,7 @@ private fun DetailContent(
             ) {
                 items(detail.seasons, key = { it.number }) { item ->
                     val colors = MaterialTheme.colorScheme
+                    val zen = LocalZenColors.current
                     FilterChip(
                         selected = item.number == selectedSeason,
                         onClick = { onSelectSeason(item.number) },
@@ -208,7 +212,7 @@ private fun DetailContent(
                         shape = CircleShape,
                         border = null,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = colors.surfaceContainerHigh,
+                            containerColor = zen.mutedFill,
                             labelColor = colors.onSurfaceVariant,
                             selectedContainerColor = colors.primary,
                             selectedLabelColor = colors.onPrimary,
@@ -242,118 +246,126 @@ private fun ShowHero(detail: ShowDetail) {
     val show = detail.show
     val colors = MaterialTheme.colorScheme
     val textOnHero = Color.White
+    val posterShape = RoundedCornerShape(16.dp)
 
-    Card(
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.45f),
-        ),
+        strong = true,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(238.dp),
-        ) {
-            ShowBackdrop(
-                show = show,
-                modifier = Modifier.matchParentSize(),
-            )
+        Column {
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to Color.Transparent,
-                            0.35f to Color.Black.copy(alpha = 0.18f),
-                            1f to Color.Black.copy(alpha = 0.82f),
-                        ),
-                    ),
-            )
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.Bottom,
+                    .fillMaxWidth()
+                    .height(244.dp),
             ) {
-                PosterImage(
+                ShowBackdrop(
                     show = show,
+                    modifier = Modifier.matchParentSize(),
+                )
+                Box(
                     modifier = Modifier
-                        .width(92.dp)
-                        .height(138.dp),
-                    cornerRadius = 12.dp,
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.35f to Color(0xFF07151A).copy(alpha = 0.18f),
+                                1f to Color(0xFF061014).copy(alpha = 0.88f),
+                            ),
+                        ),
                 )
 
-                Spacer(Modifier.width(14.dp))
-
-                Column(
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(bottom = 2.dp),
+                        .align(Alignment.BottomStart)
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    Text(
-                        text = show.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = textOnHero,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = showMeta(show),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = textOnHero.copy(alpha = 0.82f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .width(92.dp)
+                            .height(138.dp)
+                            .clip(posterShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.5f), posterShape),
+                    ) {
+                        PosterImage(
+                            show = show,
+                            modifier = Modifier.fillMaxSize(),
+                            cornerRadius = 16.dp,
+                        )
+                    }
+
+                    Spacer(Modifier.width(14.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(bottom = 2.dp),
+                    ) {
+                        Text(
+                            text = show.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = textOnHero,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = showMeta(show),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textOnHero.copy(alpha = 0.82f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
-        }
 
-        Column(Modifier.padding(16.dp)) {
-            if (!show.overview.isNullOrBlank()) {
-                Text(
-                    text = show.overview,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(16.dp))
-            }
+            Column(Modifier.padding(18.dp)) {
+                if (!show.overview.isNullOrBlank()) {
+                    Text(
+                        text = show.overview,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 5,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
 
-            val fraction = if (detail.airedEpisodes > 0) {
-                (detail.completedEpisodes.toFloat() / detail.airedEpisodes.toFloat())
-                    .coerceIn(0f, 1f)
-            } else {
-                0f
-            }
+                val fraction = if (detail.airedEpisodes > 0) {
+                    (detail.completedEpisodes.toFloat() / detail.airedEpisodes.toFloat())
+                        .coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "${detail.completedEpisodes} of ${detail.airedEpisodes} aired episodes watched",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "${(fraction * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.labelMedium,
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${detail.completedEpisodes} of ${detail.airedEpisodes} " +
+                            "aired episodes watched",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "${(fraction * 100).roundToInt()}%",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.primary,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { fraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
                     color = colors.primary,
+                    trackColor = colors.onSurface.copy(alpha = 0.08f),
+                    strokeCap = StrokeCap.Round,
                 )
             }
-            Spacer(Modifier.height(7.dp))
-            LinearProgressIndicator(
-                progress = { fraction },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
-                strokeCap = StrokeCap.Round,
-            )
         }
     }
 }
@@ -366,17 +378,16 @@ private fun NextEpisodeCard(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    Card(
+    val zen = LocalZenColors.current
+
+    GlassSurface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = colors.primaryContainer),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.25f),
-        ),
+        brush = zen.iridescentBrush,
+        strong = true,
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
@@ -385,13 +396,14 @@ private fun NextEpisodeCard(
                 modifier = Modifier
                     .width(112.dp)
                     .aspectRatio(16f / 9f),
+                cornerRadius = 12.dp,
             )
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = null,
-                        tint = colors.onPrimaryContainer,
+                        tint = zen.onAccent,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(6.dp))
@@ -399,7 +411,7 @@ private fun NextEpisodeCard(
                         text = "NEXT UP",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = colors.onPrimaryContainer,
+                        color = zen.onAccent,
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -408,7 +420,7 @@ private fun NextEpisodeCard(
                         next.title?.takeIf { it.isNotBlank() } ?: "Episode ${next.number}"
                     }",
                     style = MaterialTheme.typography.titleMedium,
-                    color = colors.onPrimaryContainer,
+                    color = zen.onAccent,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -417,18 +429,23 @@ private fun NextEpisodeCard(
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodySmall,
-                        color = colors.onPrimaryContainer.copy(alpha = 0.8f),
+                        color = zen.onAccent.copy(alpha = 0.72f),
                     )
                 }
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = onMarkWatched,
                     enabled = !isSaving,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary,
+                    ),
                 ) {
                     if (isSaving) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
+                            color = colors.onPrimary,
                         )
                     } else {
                         Icon(
@@ -472,53 +489,65 @@ private fun EpisodeRow(
     val item = episode.episode
     val aired = isAired(item.firstAired)
 
-    Row(
+    GlassSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(
-                value = episode.completed,
-                enabled = enabled && aired,
-                role = Role.Checkbox,
-                onValueChange = { onToggle() },
-            )
-            .padding(horizontal = 16.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
-        Checkbox(
-            checked = episode.completed,
-            onCheckedChange = null,
-            enabled = enabled && aired,
-        )
-        Spacer(Modifier.width(6.dp))
-        EpisodeStill(
-            episode = item,
+        Row(
             modifier = Modifier
-                .width(100.dp)
-                .aspectRatio(16f / 9f),
-            cornerRadius = 8.dp,
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = episodeCode(item.season, item.number),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (aired) colors.primary else colors.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(1.dp))
-            Text(
-                text = item.title?.takeIf { it.isNotBlank() } ?: "Episode ${item.number}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (aired) colors.onSurface else colors.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            episodeAirLabel(item)?.let { label ->
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant,
+                .fillMaxWidth()
+                .toggleable(
+                    value = episode.completed,
+                    enabled = enabled && aired,
+                    role = Role.Checkbox,
+                    onValueChange = { onToggle() },
                 )
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(
+                checked = episode.completed,
+                onCheckedChange = null,
+                enabled = enabled && aired,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = colors.primary,
+                    checkmarkColor = colors.onPrimary,
+                    uncheckedColor = colors.outline,
+                ),
+            )
+            Spacer(Modifier.width(6.dp))
+            EpisodeStill(
+                episode = item,
+                modifier = Modifier
+                    .width(96.dp)
+                    .aspectRatio(16f / 9f),
+                cornerRadius = 10.dp,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = episodeCode(item.season, item.number),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (aired) colors.primary else colors.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    text = item.title?.takeIf { it.isNotBlank() } ?: "Episode ${item.number}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (aired) colors.onSurface else colors.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                episodeAirLabel(item)?.let { label ->
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

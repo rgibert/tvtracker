@@ -1,7 +1,8 @@
 package ca.gibert.tvtracker.ui.upcoming
 
 import android.text.format.DateUtils
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +13,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -33,8 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +51,8 @@ import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
 import ca.gibert.tvtracker.ui.rememberIs24HourClock
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatRelativeDay
 import ca.gibert.tvtracker.util.formatTime
@@ -132,7 +138,7 @@ fun UpcomingScreen(
                             top = 8.dp,
                             bottom = 24.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         item(key = "header") {
                             UpcomingHeader(items = state.items)
@@ -180,25 +186,77 @@ fun UpcomingScreen(
 @Composable
 private fun UpcomingHeader(items: List<CalendarItem>) {
     val showCount = items.map { it.show.ids.trakt }.distinct().size
-    Text(
-        text = "Coming Up",
-        style = MaterialTheme.typography.headlineLarge,
+    val zen = LocalZenColors.current
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp),
-    )
-    Text(
-        text = when {
-            items.isEmpty() -> "Nothing scheduled in the next 14 days"
-            showCount == 1 -> "1 episode from 1 show in the next 14 days"
-            else -> "${items.size} episodes from $showCount shows in the next 14 days"
-        },
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 8.dp),
-    )
+            .padding(top = 6.dp, bottom = 8.dp),
+    ) {
+        Text(
+            text = "YOUR CALENDAR",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Coming Up",
+            style = MaterialTheme.typography.headlineLarge,
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = when {
+                items.isEmpty() -> "Nothing scheduled in the next 14 days"
+                showCount == 1 -> "${items.size} ${
+                    if (items.size == 1) "episode" else "episodes"
+                } from 1 show in the next 14 days"
+                else -> "${items.size} episodes from $showCount shows in the next 14 days"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(18.dp))
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(17.dp))
+                        .background(zen.iridescentBrush)
+                        .border(1.dp, zen.glassBorderStrong, RoundedCornerShape(17.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        tint = zen.onAccent,
+                        modifier = Modifier.size(23.dp),
+                    )
+                }
+                Spacer(Modifier.width(13.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = if (items.size == 1) "1 episode" else "${items.size} episodes",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = "from $showCount ${if (showCount == 1) "show" else "shows"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Pill(text = "14 days", emphasis = true)
+            }
+        }
+    }
 }
 
 @Composable
@@ -233,18 +291,13 @@ private fun UpcomingRow(
     val episode = item.episode
     val colors = MaterialTheme.colorScheme
 
-    Card(
-        onClick = onClick,
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.45f),
-        ),
+        onClick = onClick,
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(13.dp),
             verticalAlignment = Alignment.Top,
         ) {
             PosterImage(
@@ -252,7 +305,7 @@ private fun UpcomingRow(
                 modifier = Modifier
                     .width(50.dp)
                     .height(75.dp),
-                cornerRadius = 10.dp,
+                cornerRadius = 12.dp,
             )
 
             Spacer(Modifier.width(12.dp))
@@ -284,6 +337,9 @@ private fun UpcomingRow(
                             text = it,
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                     episodeBadge(episode.episodeType)?.let { badge ->

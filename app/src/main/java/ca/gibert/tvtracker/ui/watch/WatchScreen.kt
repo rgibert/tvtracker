@@ -1,7 +1,7 @@
 package ca.gibert.tvtracker.ui.watch
 
 import android.text.format.DateUtils
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,21 +11,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -40,8 +38,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +56,9 @@ import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
+import ca.gibert.tvtracker.ui.theme.ZenIconButton
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatShortDate
 import ca.gibert.tvtracker.util.isAired
@@ -217,15 +221,124 @@ private fun WatchHeader(items: List<WatchItem>) {
             .padding(top = 6.dp, bottom = 8.dp),
     ) {
         Text(
+            text = "YOUR QUEUE",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
             text = "To Watch",
             style = MaterialTheme.typography.headlineLarge,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(18.dp))
+        WatchOverviewCard(items = items, upNext = upNext, watchlisted = watchlisted)
+    }
+}
+
+@Composable
+private fun WatchOverviewCard(
+    items: List<WatchItem>,
+    upNext: Int,
+    watchlisted: Int,
+) {
+    val zen = LocalZenColors.current
+    val featured = items
+        .map { it.show }
+        .distinctBy { it.ids.trakt }
+        .take(3)
+
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        brush = zen.iridescentBrush,
+        strong = true,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "UP NEXT",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+                    color = zen.onAccent.copy(alpha = 0.62f),
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = items.size.toString(),
+                        style = MaterialTheme.typography.displayMedium,
+                        color = zen.onAccent,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (items.size == 1) "show in\nyour queue" else "shows in\nyour queue",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = zen.onAccent.copy(alpha = 0.72f),
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = listOfNotNull(
+                        upNext.takeIf { it > 0 }?.let { "$it ready to continue" },
+                        watchlisted.takeIf { it > 0 }?.let { "$it on watchlist" },
+                    ).joinToString(" · ").ifBlank { "Everything is up to date" },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = zen.onAccent.copy(alpha = 0.62f),
+                )
+            }
+
+            if (featured.isNotEmpty()) {
+                Spacer(Modifier.width(14.dp))
+                PosterStack(shows = featured)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosterStack(shows: List<Show>) {
+    val zen = LocalZenColors.current
+    val posterShape = RoundedCornerShape(14.dp)
+    val layers = shows.take(3)
+
+    Box(
+        modifier = Modifier
+            .width(106.dp)
+            .height(118.dp),
+    ) {
+        layers.asReversed().forEachIndexed { reversedIndex, show ->
+            val depth = layers.size - 1 - reversedIndex
+            val rotation = when (depth) {
+                0 -> -7f
+                1 -> 2f
+                else -> 9f
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset(x = (depth * 20).dp, y = ((2 - depth) * 7).dp)
+                    .size(width = 64.dp, height = 96.dp)
+                    .graphicsLayer { rotationZ = rotation }
+                    .clip(posterShape)
+                    .border(1.dp, zen.glassBorderStrong, posterShape),
+            ) {
+                PosterImage(
+                    show = show,
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 14.dp,
+                )
+            }
+        }
     }
 }
 
@@ -240,29 +353,24 @@ private fun WatchCard(
     val show = item.show
     val colors = MaterialTheme.colorScheme
 
-    Card(
-        onClick = onClick,
+    GlassSurface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLow),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.45f),
-        ),
+        onClick = onClick,
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.Top,
         ) {
             PosterImage(
                 show = show,
                 modifier = Modifier
-                    .width(66.dp)
-                    .height(99.dp),
-                cornerRadius = 12.dp,
+                    .width(64.dp)
+                    .height(96.dp),
+                cornerRadius = 14.dp,
             )
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(13.dp))
 
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -326,15 +434,15 @@ private fun WatchCard(
             when (item) {
                 is WatchItem.UpNext -> {
                     val episode = item.progress.nextEpisode
-                    FilledTonalIconButton(
+                    ZenIconButton(
                         onClick = onMarkWatched,
                         enabled = !isMarking,
-                        modifier = Modifier.size(40.dp),
                     ) {
                         if (isMarking) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
+                                color = colors.onSurface,
                             )
                         } else {
                             Icon(
@@ -342,6 +450,7 @@ private fun WatchCard(
                                 contentDescription = episode?.let {
                                     "Mark ${episodeCode(it.season, it.number)} watched"
                                 } ?: "Mark watched",
+                                tint = colors.onSurface,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -387,6 +496,8 @@ private fun ProgressBar(completed: Int, aired: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .height(5.dp),
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
     )
     Spacer(Modifier.height(4.dp))

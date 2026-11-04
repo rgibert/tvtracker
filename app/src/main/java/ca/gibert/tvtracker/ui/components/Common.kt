@@ -1,8 +1,8 @@
 package ca.gibert.tvtracker.ui.components
 
 import android.text.format.DateUtils
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,13 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 
 @Composable
 fun CachedBanner(
@@ -46,15 +48,9 @@ fun CachedBanner(
         )
     }
 
-    Surface(
+    GlassSurface(
         modifier = modifier.fillMaxWidth(),
-        color = colors.secondaryContainer,
-        contentColor = colors.onSecondaryContainer,
         shape = MaterialTheme.shapes.large,
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.outlineVariant.copy(alpha = 0.3f),
-        ),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -64,6 +60,7 @@ fun CachedBanner(
             Icon(
                 imageVector = Icons.Outlined.CloudOff,
                 contentDescription = null,
+                tint = colors.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
             Text(
@@ -73,6 +70,7 @@ fun CachedBanner(
                     "Showing saved data"
                 },
                 style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
             )
         }
     }
@@ -86,6 +84,7 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
+    val zen = LocalZenColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -95,14 +94,15 @@ fun EmptyState(
         Box(
             modifier = Modifier
                 .size(84.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .clip(RoundedCornerShape(28.dp))
+                .background(zen.iridescentBrush)
+                .border(1.dp, zen.glassBorderStrong, RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = zen.onAccent,
                 modifier = Modifier.size(38.dp),
             )
         }
@@ -179,17 +179,29 @@ fun Pill(
     modifier: Modifier = Modifier,
     emphasis: Boolean = false,
 ) {
+    val zen = LocalZenColors.current
     val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier,
-        shape = CircleShape,
-        color = if (emphasis) colors.primaryContainer else colors.surfaceContainerHighest,
-        contentColor = if (emphasis) colors.onPrimaryContainer else colors.onSurfaceVariant,
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .then(
+                if (emphasis) {
+                    Modifier.background(zen.iridescentBrush)
+                } else {
+                    Modifier.background(zen.mutedFill)
+                },
+            )
+            .border(
+                width = 1.dp,
+                color = if (emphasis) zen.glassBorderStrong else zen.glassBorder,
+                shape = CircleShape,
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            color = if (emphasis) zen.onAccent else colors.onSurfaceVariant,
         )
     }
 }

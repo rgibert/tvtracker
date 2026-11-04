@@ -5,20 +5,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val LightColors = lightColorScheme(
-    primary = TealPrimary,
-    onPrimary = TealOnPrimary,
-    primaryContainer = TealPrimaryContainer,
-    onPrimaryContainer = TealOnPrimaryContainer,
-    secondary = TealSecondary,
-    onSecondary = TealOnSecondary,
-    secondaryContainer = TealSecondaryContainer,
-    onSecondaryContainer = TealOnSecondaryContainer,
-    tertiary = BlueTertiary,
-    onTertiary = BlueOnTertiary,
-    tertiaryContainer = BlueTertiaryContainer,
-    onTertiaryContainer = BlueOnTertiaryContainer,
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    secondary = LightSecondary,
+    onSecondary = LightOnSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightTertiary,
+    onTertiary = LightOnTertiary,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
     background = LightBackground,
     onBackground = LightOnBackground,
     surface = LightSurface,
@@ -77,10 +78,13 @@ fun TvTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content,
-    )
+    val zen = if (darkTheme) DarkZenColors else LightZenColors
+    CompositionLocalProvider(LocalZenColors provides zen) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }
