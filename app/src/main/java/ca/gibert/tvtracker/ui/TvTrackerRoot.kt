@@ -28,10 +28,12 @@ import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,11 +90,19 @@ fun TvTrackerRoot(container: AppContainer) {
 
     Box(Modifier.fillMaxSize()) {
         ZenBackground()
-        when (val state = authState) {
-            AuthState.Loading -> LoadingScreen()
-            AuthState.NeedsClientId -> AuthScreen(container = container, loggedOut = null)
-            is AuthState.LoggedOut -> AuthScreen(container = container, loggedOut = state)
-            is AuthState.LoggedIn -> MainScaffold(container = container)
+        // GlassSurface is a plain Box, so any Text/Icon without an explicit
+        // colour would fall back to the default black content colour. Provide
+        // the scheme's on-surface colour so unstyled content stays legible on
+        // the dark blue background.
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+        ) {
+            when (val state = authState) {
+                AuthState.Loading -> LoadingScreen()
+                AuthState.NeedsClientId -> AuthScreen(container = container, loggedOut = null)
+                is AuthState.LoggedOut -> AuthScreen(container = container, loggedOut = state)
+                is AuthState.LoggedIn -> MainScaffold(container = container)
+            }
         }
     }
 }
@@ -106,6 +116,7 @@ private fun MainScaffold(container: AppContainer) {
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
             ZenTopBar(
                 isTab = isTab,

@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -51,51 +53,51 @@ data class ZenColors(
 )
 
 val LightZenColors = ZenColors(
-    dark = false,
-    onAccent = Color(0xFF0B1012),
+    dark = true,
+    onAccent = Color(0xFFF2F7FF),
     glassBrush = Brush.verticalGradient(
         listOf(
-            Color.White.copy(alpha = 0.68f),
-            Color.White.copy(alpha = 0.38f),
+            Color.White.copy(alpha = 0.14f),
+            Color.White.copy(alpha = 0.06f),
         ),
     ),
     glassStrongBrush = Brush.verticalGradient(
         listOf(
-            Color.White.copy(alpha = 0.84f),
-            Color.White.copy(alpha = 0.56f),
+            Color.White.copy(alpha = 0.20f),
+            Color.White.copy(alpha = 0.09f),
         ),
     ),
-    glassBorder = Color.White.copy(alpha = 0.72f),
-    glassBorderStrong = Color.White.copy(alpha = 0.9f),
-    glassShadow = Color(0xFF6A8793).copy(alpha = 0.20f),
+    glassBorder = Color.White.copy(alpha = 0.18f),
+    glassBorderStrong = Color.White.copy(alpha = 0.30f),
+    glassShadow = Color(0xFF02060F).copy(alpha = 0.50f),
     backgroundBrush = Brush.verticalGradient(
         listOf(
-            Color(0xFFF5F9FA),
-            Color(0xFFEAF2F4),
-            Color(0xFFF1F4F4),
+            Color(0xFF0E1626),
+            Color(0xFF13203A),
+            Color(0xFF0D1730),
         ),
     ),
     iridescentBrush = Brush.linearGradient(
         listOf(
-            Color(0xFFD7EDF4),
-            Color(0xFFE7D9ED),
-            Color(0xFFF3DCCE),
-            Color(0xFFD4ECE2),
+            Color(0xFF1E5496),
+            Color(0xFF2F6FB8),
+            Color(0xFF194576),
+            Color(0xFF2E6BB2),
         ),
     ),
     logoBrush = Brush.linearGradient(
         listOf(
-            Color(0xFFB9DFEB),
-            Color(0xFFE1CEE9),
-            Color(0xFFF2D3C1),
+            Color(0xFF2A62A8),
+            Color(0xFF3E86C9),
+            Color(0xFF1D4E8B),
         ),
     ),
-    mutedFill = Color(0xFFE5EEF1).copy(alpha = 0.72f),
-    topSheen = Color.White.copy(alpha = 0.34f),
-    auroraSky = Color(0xFFA9D6E4).copy(alpha = 0.48f),
-    auroraBlush = Color(0xFFD9BBD7).copy(alpha = 0.34f),
-    auroraPeach = Color(0xFFF1CBB9).copy(alpha = 0.36f),
-    auroraMint = Color(0xFFB9E0D3).copy(alpha = 0.32f),
+    mutedFill = Color.White.copy(alpha = 0.09f),
+    topSheen = Color.White.copy(alpha = 0.14f),
+    auroraSky = Color(0xFF3D84D4).copy(alpha = 0.40f),
+    auroraBlush = Color(0xFF5566D6).copy(alpha = 0.26f),
+    auroraPeach = Color(0xFF38A0D8).copy(alpha = 0.28f),
+    auroraMint = Color(0xFF2C7FA6).copy(alpha = 0.26f),
 )
 
 val DarkZenColors = ZenColors(
@@ -118,32 +120,32 @@ val DarkZenColors = ZenColors(
     glassShadow = Color.Black.copy(alpha = 0.45f),
     backgroundBrush = Brush.verticalGradient(
         listOf(
-            Color(0xFF0A1114),
-            Color(0xFF0E171B),
-            Color(0xFF0A1215),
+            Color(0xFF070C18),
+            Color(0xFF0B1426),
+            Color(0xFF080F1E),
         ),
     ),
     iridescentBrush = Brush.linearGradient(
         listOf(
-            Color(0xFF234A57),
-            Color(0xFF3C2C45),
-            Color(0xFF4B352B),
-            Color(0xFF234139),
+            Color(0xFF16406F),
+            Color(0xFF25598F),
+            Color(0xFF123457),
+            Color(0xFF2A6299),
         ),
     ),
     logoBrush = Brush.linearGradient(
         listOf(
-            Color(0xFF3C6F7C),
-            Color(0xFF60496A),
-            Color(0xFF765544),
+            Color(0xFF2C6695),
+            Color(0xFF31549A),
+            Color(0xFF3F7EC4),
         ),
     ),
     mutedFill = Color.White.copy(alpha = 0.07f),
     topSheen = Color.White.copy(alpha = 0.08f),
-    auroraSky = Color(0xFF1C5365).copy(alpha = 0.42f),
-    auroraBlush = Color(0xFF4A2D49).copy(alpha = 0.30f),
-    auroraPeach = Color(0xFF5A382A).copy(alpha = 0.26f),
-    auroraMint = Color(0xFF1E4B40).copy(alpha = 0.30f),
+    auroraSky = Color(0xFF1D5A96).copy(alpha = 0.42f),
+    auroraBlush = Color(0xFF2E3A86).copy(alpha = 0.30f),
+    auroraPeach = Color(0xFF1E6C96).copy(alpha = 0.28f),
+    auroraMint = Color(0xFF1B5E7A).copy(alpha = 0.30f),
 )
 
 val LocalZenColors = staticCompositionLocalOf { LightZenColors }
@@ -251,7 +253,17 @@ fun GlassSurface(
                     ),
             )
         }
-        content()
+        // Surfaces own their content colour: accent cards read with onAccent,
+        // plain glass cards with onSurface, so unstyled text is never black.
+        CompositionLocalProvider(
+            LocalContentColor provides if (brush != null) {
+                zen.onAccent
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        ) {
+            content()
+        }
     }
 }
 

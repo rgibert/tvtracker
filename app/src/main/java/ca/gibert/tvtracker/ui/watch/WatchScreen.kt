@@ -1,7 +1,6 @@
 package ca.gibert.tvtracker.ui.watch
 
 import android.text.format.DateUtils
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,13 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -38,8 +35,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,7 +52,6 @@ import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
 import ca.gibert.tvtracker.ui.theme.GlassSurface
-import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.ui.theme.ZenIconButton
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatShortDate
@@ -236,109 +230,6 @@ private fun WatchHeader(items: List<WatchItem>) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(18.dp))
-        WatchOverviewCard(items = items, upNext = upNext, watchlisted = watchlisted)
-    }
-}
-
-@Composable
-private fun WatchOverviewCard(
-    items: List<WatchItem>,
-    upNext: Int,
-    watchlisted: Int,
-) {
-    val zen = LocalZenColors.current
-    val featured = items
-        .map { it.show }
-        .distinctBy { it.ids.trakt }
-        .take(3)
-
-    GlassSurface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        brush = zen.iridescentBrush,
-        strong = true,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = "UP NEXT",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = zen.onAccent.copy(alpha = 0.62f),
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = items.size.toString(),
-                        style = MaterialTheme.typography.displayMedium,
-                        color = zen.onAccent,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = if (items.size == 1) "show in\nyour queue" else "shows in\nyour queue",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = zen.onAccent.copy(alpha = 0.72f),
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = listOfNotNull(
-                        upNext.takeIf { it > 0 }?.let { "$it ready to continue" },
-                        watchlisted.takeIf { it > 0 }?.let { "$it on watchlist" },
-                    ).joinToString(" · ").ifBlank { "Everything is up to date" },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = zen.onAccent.copy(alpha = 0.62f),
-                )
-            }
-
-            if (featured.isNotEmpty()) {
-                Spacer(Modifier.width(14.dp))
-                PosterStack(shows = featured)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PosterStack(shows: List<Show>) {
-    val zen = LocalZenColors.current
-    val posterShape = RoundedCornerShape(14.dp)
-    val layers = shows.take(3)
-
-    Box(
-        modifier = Modifier
-            .width(106.dp)
-            .height(118.dp),
-    ) {
-        layers.asReversed().forEachIndexed { reversedIndex, show ->
-            val depth = layers.size - 1 - reversedIndex
-            val rotation = when (depth) {
-                0 -> -7f
-                1 -> 2f
-                else -> 9f
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset(x = (depth * 20).dp, y = ((2 - depth) * 7).dp)
-                    .size(width = 64.dp, height = 96.dp)
-                    .graphicsLayer { rotationZ = rotation }
-                    .clip(posterShape)
-                    .border(1.dp, zen.glassBorderStrong, posterShape),
-            ) {
-                PosterImage(
-                    show = show,
-                    modifier = Modifier.fillMaxSize(),
-                    cornerRadius = 14.dp,
-                )
-            }
-        }
     }
 }
 
