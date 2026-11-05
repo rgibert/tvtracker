@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -122,8 +124,10 @@ fun ShowDetailScreen(
                         selectedSeason = state.selectedSeason,
                         mutatingEpisodeIds = state.mutatingEpisodeIds,
                         showingCached = state.showingCached,
+                        isHidden = state.isHidden,
                         onSelectSeason = viewModel::selectSeason,
                         onToggleEpisode = viewModel::toggleEpisode,
+                        onToggleHidden = viewModel::toggleHidden,
                     )
                 }
             }
@@ -144,8 +148,10 @@ private fun DetailContent(
     selectedSeason: Int?,
     mutatingEpisodeIds: Set<Int>,
     showingCached: Boolean,
+    isHidden: Boolean,
     onSelectSeason: (Int) -> Unit,
     onToggleEpisode: (DetailEpisode) -> Unit,
+    onToggleHidden: () -> Unit,
 ) {
     val season = detail.seasons.firstOrNull { it.number == selectedSeason }
 
@@ -161,6 +167,14 @@ private fun DetailContent(
                 }
                 ShowHero(detail)
             }
+        }
+
+        item(key = "list_visibility") {
+            ListVisibilityRow(
+                isHidden = isHidden,
+                onToggle = onToggleHidden,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
         }
 
         detail.nextEpisode?.let { next ->
@@ -364,6 +378,55 @@ private fun ShowHero(detail: ShowDetail) {
                     color = colors.primary,
                     trackColor = colors.onSurface.copy(alpha = 0.08f),
                     strokeCap = StrokeCap.Round,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListVisibilityRow(
+    isHidden: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+
+    GlassSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        onClick = onToggle,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = if (isHidden) {
+                    Icons.Outlined.Visibility
+                } else {
+                    Icons.Outlined.VisibilityOff
+                },
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(13.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = if (isHidden) "Show in my lists" else "Hide from my lists",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurface,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = if (isHidden) {
+                        "Hidden from To Watch and Coming Up right now"
+                    } else {
+                        "Keeps it out of To Watch and Coming Up"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurfaceVariant,
                 )
             }
         }

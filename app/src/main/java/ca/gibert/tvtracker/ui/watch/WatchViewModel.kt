@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
+import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.data.WatchItem
 import ca.gibert.tvtracker.util.episodeCode
@@ -28,6 +29,7 @@ data class WatchUiState(
     val showingCached: Boolean = false,
     val lastUpdated: Long? = null,
     val markingEpisodeIds: Set<Int> = emptySet(),
+    val hiddenIds: Set<Int> = emptySet(),
 )
 
 sealed interface WatchEvent {
@@ -37,6 +39,7 @@ sealed interface WatchEvent {
 
 class WatchViewModel(
     private val repository: TraktRepository,
+    private val hiddenShows: HiddenShowStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WatchUiState())
@@ -58,6 +61,10 @@ class WatchViewModel(
      * from a show's detail screen, where episodes may have been marked watched).
      */
     fun onResume() {
+        // The hidden list can change while another screen (Settings, or this
+        // show's detail page) is on top, so re-read it before deciding whether
+        // a refresh is needed.
+        viewModelScope.launch { syncHidden() }
         if (_state.value.isLoading || _state.value.isRefreshing) return
         load(initial = false)
     }
@@ -110,9 +117,16 @@ class WatchViewModel(
         load(initial = false)
     }
 
+    private suspend fun syncHidden() {
+        val hidden = hiddenShows.readIds()
+        _state.update { it.copy(hiddenIds = hidden) }
+    }
+
     private fun load(initial: Boolean, userInitiated: Boolean = false) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            syncHidden()
+
             if (initial) {
                 val cached = repository.cachedToWatch()
                 if (cached != null) {
@@ -169,7 +183,12 @@ class WatchViewModel(
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { WatchViewModel(container.traktRepository) }
+            initializer {
+                WatchViewModel(
+                    repository = container.traktRepository,
+                    hiddenShows = container.hiddenShowStore,
+                )
+            }
         }
     }
 }

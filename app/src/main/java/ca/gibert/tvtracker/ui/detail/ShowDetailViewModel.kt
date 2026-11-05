@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.DetailEpisode
+import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.ShowDetail
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.util.friendlyError
@@ -29,11 +30,13 @@ data class ShowDetailUiState(
     val errorMessage: String? = null,
     val showingCached: Boolean = false,
     val mutatingEpisodeIds: Set<Int> = emptySet(),
+    val isHidden: Boolean = false,
 )
 
 class ShowDetailViewModel(
     private val showId: Int,
     private val repository: TraktRepository,
+    private val hiddenShows: HiddenShowStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowDetailUiState())
@@ -98,6 +101,33 @@ class ShowDetailViewModel(
         }
     }
 
+    /**
+     * Hides or restores the show across To Watch and Coming Up. Hiding is done
+     * from here rather than from the lists so it stays next to everything else
+     * about the show; unhiding also happens in Settings.
+     */
+    fun toggleHidden() {
+        val detail = _state.value.detail ?: return
+
+        viewModelScope.launch {
+            try {
+                if (_state.value.isHidden) {
+                    hiddenShows.unhide(showId)
+                    _state.update { it.copy(isHidden = false) }
+                    _messages.send("${detail.show.title} is back in your lists")
+                } else {
+                    hiddenShows.hide(detail.show)
+                    _state.update { it.copy(isHidden = true) }
+                    _messages.send("${detail.show.title} is hidden from your lists")
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _messages.send(friendlyError(error))
+            }
+        }
+    }
+
     private fun refreshSilently() {
         viewModelScope.launch {
             try {
@@ -115,6 +145,8 @@ class ShowDetailViewModel(
     private fun load(initial: Boolean, userInitiated: Boolean = false) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            _state.update { it.copy(isHidden = showId in hiddenShows.readIds()) }
+
             if (initial) {
                 val cached = repository.cachedShowDetail(showId)
                 if (cached != null) {
@@ -218,7 +250,13 @@ class ShowDetailViewModel(
     companion object {
         fun factory(container: AppContainer, showId: Int): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { ShowDetailViewModel(showId, container.traktRepository) }
+                initializer {
+                    ShowDetailViewModel(
+                        showId = showId,
+                        repository = container.traktRepository,
+                        hiddenShows = container.hiddenShowStore,
+                    )
+                }
             }
     }
 }

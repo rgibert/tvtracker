@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.AuthState
 import ca.gibert.tvtracker.data.AuthRepository
+import ca.gibert.tvtracker.data.HiddenShow
+import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.data.User
 import ca.gibert.tvtracker.util.friendlyError
@@ -26,12 +28,14 @@ data class SettingsUiState(
     val isLoadingProfile: Boolean = true,
     val profileError: String? = null,
     val isBusy: Boolean = false,
+    val hiddenShows: List<HiddenShow> = emptyList(),
 )
 
 class SettingsViewModel(
     private val container: AppContainer,
     private val repository: TraktRepository,
     private val authRepository: AuthRepository,
+    private val hiddenShowStore: HiddenShowStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -46,9 +50,41 @@ class SettingsViewModel(
 
     init {
         loadProfile()
+        loadHiddenShows()
     }
 
     fun refreshProfile() = loadProfile()
+
+    /** Puts a hidden show back into To Watch and Coming Up. */
+    fun unhide(show: HiddenShow) {
+        viewModelScope.launch {
+            try {
+                hiddenShowStore.unhide(show.trakt)
+                _state.update { state ->
+                    state.copy(hiddenShows = state.hiddenShows.filterNot { it.trakt == show.trakt })
+                }
+                _messages.send("${show.title} is back in your lists")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _messages.send(friendlyError(error))
+            }
+        }
+    }
+
+    private fun loadHiddenShows() {
+        viewModelScope.launch {
+            try {
+                val shows = hiddenShowStore.read()
+                _state.update { it.copy(hiddenShows = shows) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // The list is local and cheap to re-read; leave the section
+                // hidden rather than showing an error for it.
+            }
+        }
+    }
 
     fun signOut() {
         viewModelScope.launch {
@@ -119,6 +155,7 @@ class SettingsViewModel(
                     container = container,
                     repository = container.traktRepository,
                     authRepository = container.authRepository,
+                    hiddenShowStore = container.hiddenShowStore,
                 )
             }
         }

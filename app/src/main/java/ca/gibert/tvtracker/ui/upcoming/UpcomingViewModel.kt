@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.CalendarItem
+import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.util.friendlyError
 import kotlinx.coroutines.CancellationException
@@ -26,10 +27,12 @@ data class UpcomingUiState(
     val errorMessage: String? = null,
     val showingCached: Boolean = false,
     val lastUpdated: Long? = null,
+    val hiddenIds: Set<Int> = emptySet(),
 )
 
 class UpcomingViewModel(
     private val repository: TraktRepository,
+    private val hiddenShows: HiddenShowStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(UpcomingUiState())
@@ -51,13 +54,23 @@ class UpcomingViewModel(
      * from a show's detail screen, where episodes may have been marked watched).
      */
     fun onResume() {
+        // Hidden shows can be toggled from Settings or a show's detail page
+        // while this screen is not composed, so re-read the list first.
+        viewModelScope.launch { syncHidden() }
         if (_state.value.isLoading || _state.value.isRefreshing) return
         load(initial = false)
+    }
+
+    private suspend fun syncHidden() {
+        val hidden = hiddenShows.readIds()
+        _state.update { it.copy(hiddenIds = hidden) }
     }
 
     private fun load(initial: Boolean, userInitiated: Boolean = false) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            syncHidden()
+
             if (initial) {
                 val cached = repository.cachedUpcoming()
                 if (cached != null) {
@@ -114,7 +127,12 @@ class UpcomingViewModel(
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { UpcomingViewModel(container.traktRepository) }
+            initializer {
+                UpcomingViewModel(
+                    repository = container.traktRepository,
+                    hiddenShows = container.hiddenShowStore,
+                )
+            }
         }
     }
 }

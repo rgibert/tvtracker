@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -117,6 +118,29 @@ fun SettingsScreen(
                     onClick = { confirmSignOut = true },
                     enabled = !state.isBusy,
                 )
+            }
+
+            if (state.hiddenShows.isNotEmpty()) {
+                SettingsSection(title = "Hidden shows") {
+                    state.hiddenShows
+                        .sortedBy { it.title.lowercase() }
+                        .forEachIndexed { index, show ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                        .copy(alpha = 0.5f),
+                                )
+                            }
+                            SettingsRow(
+                                icon = Icons.Outlined.VisibilityOff,
+                                title = show.title,
+                                subtitle = "Hidden from To Watch and Coming Up",
+                                onClick = { viewModel.unhide(show) },
+                                trailing = "Show",
+                            )
+                        }
+                }
             }
 
             SettingsSection(title = "Saved data") {

@@ -83,8 +83,14 @@ fun UpcomingScreen(
         }
     }
 
-    val grouped = remember(state.items) {
-        state.items
+    // Items stay unfiltered in state so unhiding works even when the refresh
+    // fails; this list is what every section below renders.
+    val items = remember(state.items, state.hiddenIds) {
+        state.items.filter { it.show.ids.trakt !in state.hiddenIds }
+    }
+
+    val grouped = remember(items) {
+        items
             .mapNotNull { item ->
                 parseTraktInstant(item.firstAired)?.let { instant -> instant to item }
             }
@@ -99,13 +105,13 @@ fun UpcomingScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             when {
-                state.isLoading && state.items.isEmpty() -> {
+                state.isLoading && items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
 
-                state.items.isEmpty() && state.errorMessage != null -> {
+                items.isEmpty() && state.errorMessage != null -> {
                     ErrorState(
                         message = state.errorMessage.orEmpty(),
                         onRetry = viewModel::refresh,
@@ -113,7 +119,7 @@ fun UpcomingScreen(
                     )
                 }
 
-                state.items.isEmpty() -> {
+                items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = Icons.Outlined.CalendarMonth,
@@ -141,7 +147,7 @@ fun UpcomingScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         item(key = "header") {
-                            UpcomingHeader(items = state.items)
+                            UpcomingHeader(items = items)
                         }
 
                         if (state.showingCached) {

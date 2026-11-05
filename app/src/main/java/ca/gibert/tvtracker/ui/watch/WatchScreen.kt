@@ -98,14 +98,18 @@ fun WatchScreen(
             onRefresh = viewModel::refresh,
             modifier = Modifier.fillMaxSize(),
         ) {
+            // Items are kept unfiltered in state so an unhide shows up even when
+            // a refresh can't reach Trakt; the list itself is filtered here.
+            val items = state.items.filter { it.show.ids.trakt !in state.hiddenIds }
+
             when {
-                state.isLoading && state.items.isEmpty() -> {
+                state.isLoading && items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
 
-                state.items.isEmpty() && state.errorMessage != null -> {
+                items.isEmpty() && state.errorMessage != null -> {
                     ErrorState(
                         message = state.errorMessage.orEmpty(),
                         onRetry = viewModel::refresh,
@@ -113,7 +117,7 @@ fun WatchScreen(
                     )
                 }
 
-                state.items.isEmpty() -> {
+                items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = Icons.Outlined.CheckCircle,
@@ -141,7 +145,7 @@ fun WatchScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         item(key = "header") {
-                            WatchHeader(items = state.items)
+                            WatchHeader(items = items)
                         }
 
                         if (state.showingCached) {
@@ -151,7 +155,7 @@ fun WatchScreen(
                         }
 
                         items(
-                            items = state.items,
+                            items = items,
                             key = { item -> watchItemKey(item) },
                         ) { item ->
                             WatchCard(
