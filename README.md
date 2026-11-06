@@ -84,10 +84,15 @@ Run the checks with:
 
 ### GitHub Actions
 
-`.github/workflows/build.yml` runs only when a version tag is pushed (`v*`). It
-builds a debug APK and a release APK, runs the unit tests and lint, uploads the
-APKs to the workflow run's **Artifacts**, and publishes them on a GitHub
-**Release** for the tag.
+`.github/workflows/build.yml` runs when a version tag is pushed (`v*`) and for
+pull requests against `main`. Tag builds publish the debug and release APKs on
+a GitHub **Release**. Pull request builds publish a pre-release tagged
+`pr-<number>-<sha>` and leave a comment on the PR linking to it, so the test APK
+is easy to find. Fork pull requests only upload the debug APK to the workflow
+run's **Artifacts**, because their token cannot write releases or comments.
+
+All builds run the unit tests and lint and upload the APKs to the workflow run's
+**Artifacts**.
 
 The tag drives the app version: `v0.1.0` becomes `versionName` `0.1.0`, and
 `versionCode` is derived as `major × 1,000,000 + minor × 1,000 + patch`
