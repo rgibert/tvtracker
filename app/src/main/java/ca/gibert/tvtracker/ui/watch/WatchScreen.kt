@@ -400,6 +400,9 @@ private fun ProgressBar(completed: Int, aired: Int) {
         color = MaterialTheme.colorScheme.primary,
         trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        // Material3 draws a "stop indicator" dot at the track's right end;
+        // it reads as a stray pixel next to our cards, so skip it.
+        drawStopIndicator = {},
     )
     Spacer(Modifier.height(4.dp))
     Text(
