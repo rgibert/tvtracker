@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -119,6 +120,43 @@ jobs:
               --title "TV Tracker $GITHUB_REF_NAME" \
               --generate-notes \
               --verify-tag
+          fi
+
+      - name: Publish pull request release
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          sha="${PR_HEAD_SHA:0:7}"
+          tag="pr-${PR_NUMBER}-${sha}"
+          title="TV Tracker PR #${PR_NUMBER} (${sha})"
+          release_url="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}"
+          apk="$RUNNER_TEMP/tvtracker-${tag}-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$apk"
+
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" "$apk" \
+              --target "$PR_HEAD_SHA" \
+              --title "$title" \
+              --notes "Test build for ${PR_URL}." \
+              --prerelease
+          fi
+
+          # Keep one comment per PR and update it when a new build is uploaded.
+          marker="<!-- tvtracker-pr-release -->"
+          body="$(printf '%s\nTest APK for %s: [%s](%s)' "$marker" "$sha" "$title" "$release_url")"
+          comment_id="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1 || true)"
+          if [[ -n "$comment_id" ]]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
+              -f body="$body" >/dev/null
+          else
+            gh pr comment "$PR_NUMBER" --body "$body" >/dev/null
           fi
 
       - name: Upload reports
