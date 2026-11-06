@@ -50,6 +50,7 @@ import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
+import ca.gibert.tvtracker.ui.components.ServiceLine
 import ca.gibert.tvtracker.ui.rememberIs24HourClock
 import ca.gibert.tvtracker.ui.theme.GlassSurface
 import ca.gibert.tvtracker.ui.theme.LocalZenColors
@@ -338,16 +339,10 @@ private fun UpcomingRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    item.show.network?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
+                    ServiceLine(
+                        network = item.show.network,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     episodeBadge(episode.episodeType)?.let { badge ->
                         Pill(text = badge, emphasis = true)
                     }

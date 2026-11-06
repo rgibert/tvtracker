@@ -51,6 +51,7 @@ import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
+import ca.gibert.tvtracker.ui.components.ServiceLine
 import ca.gibert.tvtracker.ui.theme.GlassSurface
 import ca.gibert.tvtracker.ui.theme.ZenIconButton
 import ca.gibert.tvtracker.util.episodeCode
@@ -297,11 +298,19 @@ private fun WatchCard(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = colors.onSurfaceVariant,
                             )
+                            // "Next up" cards never used to show the network,
+                            // so this is where the service becomes visible.
+                            if (!show.network.isNullOrBlank()) {
+                                Spacer(Modifier.height(6.dp))
+                                ServiceLine(network = show.network)
+                            }
                             Spacer(Modifier.height(10.dp))
                             ProgressBar(
                                 completed = item.progress.completed,
                                 aired = item.progress.aired,
                             )
+                        } else if (!show.network.isNullOrBlank()) {
+                            ServiceLine(network = show.network)
                         }
                     }
 
@@ -312,13 +321,10 @@ private fun WatchCard(
                             color = colors.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = listOfNotNull(
-                                show.year?.toString(),
-                                show.network,
-                            ).joinToString(" · ").ifBlank { "Tap to see episodes" },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.onSurfaceVariant,
+                        ServiceLine(
+                            network = show.network,
+                            prefix = show.year?.toString(),
+                            fallback = "Tap to see episodes",
                         )
                     }
                 }
