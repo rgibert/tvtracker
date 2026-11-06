@@ -378,6 +378,8 @@ private fun ShowHero(detail: ShowDetail) {
                     color = colors.primary,
                     trackColor = colors.onSurface.copy(alpha = 0.08f),
                     strokeCap = StrokeCap.Round,
+                    // No stop-indicator dot at the track's right end.
+                    drawStopIndicator = {},
                 )
             }
         }
