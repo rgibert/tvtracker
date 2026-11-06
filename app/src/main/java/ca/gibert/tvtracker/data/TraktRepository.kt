@@ -1,6 +1,8 @@
 package ca.gibert.tvtracker.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
@@ -17,8 +19,31 @@ class TraktRepository(
     suspend fun refreshToWatch(): CachedToWatch = coroutineScope {
         val upNext = async { api.upNext(extended = EXTENDED, limit = PAGE_LIMIT) }
         val watchlist = async { api.watchlistShows(extended = EXTENDED, limit = PAGE_LIMIT) }
+        val merged = mergeToWatch(upNext.await(), watchlist.await())
+
+        // Trakt's up-next aggregates can count positionally (every episode
+        // before the latest watched one), so each show with a next episode
+        // gets its counts recomputed from its per-episode flags. A failed
+        // lookup keeps the up-next numbers rather than failing the refresh.
+        val items = merged.map { item ->
+            async {
+                if (item !is WatchItem.UpNext) return@async item
+                val detail = try {
+                    api.showProgress(item.show.ids.trakt, extended = null, specials = false)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    null
+                }
+                WatchItem.UpNext(
+                    show = item.show,
+                    progress = reconcileProgress(item.show, item.progress, detail),
+                )
+            }
+        }.awaitAll()
+
         val snapshot = CachedToWatch(
-            items = mergeToWatch(upNext.await(), watchlist.await()),
+            items = items,
             fetchedAt = System.currentTimeMillis(),
         )
         cache.writeToWatch(snapshot)

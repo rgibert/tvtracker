@@ -48,10 +48,12 @@ interface TraktApi {
         @Query("extended") extended: String,
     ): Show
 
+    // extended is optional: the season/episode flags come back by default and
+    // only the detail screen needs the richer episode metadata.
     @GET("shows/{id}/progress/watched")
     suspend fun showProgress(
         @Path("id") id: Int,
-        @Query("extended") extended: String,
+        @Query("extended") extended: String?,
         @Query("specials") specials: Boolean,
     ): ShowProgress
 
