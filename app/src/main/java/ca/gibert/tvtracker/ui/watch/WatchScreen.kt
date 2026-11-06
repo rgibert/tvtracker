@@ -146,7 +146,7 @@ fun WatchScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         item(key = "header") {
-                            WatchHeader(items = items)
+                            WatchHeader()
                         }
 
                         if (state.showingCached) {
@@ -196,24 +196,7 @@ fun WatchScreen(
 }
 
 @Composable
-private fun WatchHeader(items: List<WatchItem>) {
-    val upNext = items.count { it is WatchItem.UpNext }
-    val watchlisted = items.count { it is WatchItem.Watchlisted }
-    val subtitle = when {
-        upNext > 0 && watchlisted > 0 -> "$upNext ready to continue · $watchlisted on your watchlist"
-        upNext > 0 -> if (upNext == 1) {
-            "1 show ready for its next episode"
-        } else {
-            "$upNext shows ready for their next episode"
-        }
-        watchlisted > 0 -> if (watchlisted == 1) {
-            "1 show waiting on your watchlist"
-        } else {
-            "$watchlisted shows waiting on your watchlist"
-        }
-        else -> "Everything is up to date"
-    }
-
+private fun WatchHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -228,12 +211,6 @@ private fun WatchHeader(items: List<WatchItem>) {
         Text(
             text = "To Watch",
             style = MaterialTheme.typography.headlineLarge,
-        )
-        Spacer(Modifier.height(5.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
