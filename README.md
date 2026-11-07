@@ -15,6 +15,9 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
   "mark watched" shortcut for the next episode, and per-show progress.
 - **Offline-friendly** – the last list and show details are cached on the device
   and shown (with a "saved data" banner) when Trakt can't be reached.
+- **Light on the Trakt API** – watched progress is fetched in bulk (one
+  paginated request, not one per show), and screens reuse recent snapshots
+  instead of refreshing on every resume.
 - **No account system of its own** – Trakt device-code login, no password ever
   entered into this app, no subscriptions or ads.
 

@@ -1,5 +1,6 @@
 package ca.gibert.tvtracker.data
 
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -34,6 +35,17 @@ interface TraktApi {
         @Query("extended") extended: String,
         @Query("limit") limit: Int,
     ): List<WatchlistItem>
+
+    // Bulk watched progress. With extended=progress each entry includes the
+    // watched episodes for every season, so the To Watch screen no longer
+    // needs one /shows/:id/progress/watched request per show. Trakt caps this
+    // mode at 100 shows per page; the response headers report the page count.
+    @GET("sync/watched/shows")
+    suspend fun watchedShows(
+        @Query("extended") extended: String,
+        @Query("page") page: Int,
+        @Query("limit") limit: Int,
+    ): Response<List<WatchedShow>>
 
     @GET("calendars/my/shows/{start_date}/{days}")
     suspend fun myCalendar(

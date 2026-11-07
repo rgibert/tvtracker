@@ -70,9 +70,12 @@ class ShowDetailViewModel(
 
             val targetCompleted = !episode.completed
             val previous = _state.value.detail
-            if (previous != null) {
+            val updated = previous?.let {
+                applyCompletion(it, episodeId, targetCompleted)
+            }
+            if (updated != null) {
                 _state.update { state ->
-                    state.copy(detail = applyCompletion(previous, episodeId, targetCompleted))
+                    state.copy(detail = updated)
                 }
             }
 
@@ -82,7 +85,16 @@ class ShowDetailViewModel(
                 } else {
                     repository.markEpisodeUnwatched(episodeId)
                 }
-                refreshSilently()
+                if (updated != null) {
+                    try {
+                        repository.cacheShowDetail(updated)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        // The network mutation is what matters; the next detail
+                        // load will refresh the cache.
+                    }
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -124,20 +136,6 @@ class ShowDetailViewModel(
                 throw error
             } catch (error: Exception) {
                 _messages.send(friendlyError(error))
-            }
-        }
-    }
-
-    private fun refreshSilently() {
-        viewModelScope.launch {
-            try {
-                val detail = repository.refreshShowDetail(showId)
-                applyDetail(detail, fromCache = false)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                // The optimistic update is still visible, and the cached copy keeps
-                // the change. Leave the screen alone rather than flashing an error.
             }
         }
     }

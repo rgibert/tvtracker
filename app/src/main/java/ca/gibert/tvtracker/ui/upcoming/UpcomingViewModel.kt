@@ -58,6 +58,7 @@ class UpcomingViewModel(
         // while this screen is not composed, so re-read the list first.
         viewModelScope.launch { syncHidden() }
         if (_state.value.isLoading || _state.value.isRefreshing) return
+        if (isFresh(_state.value.lastUpdated)) return
         load(initial = false)
     }
 
@@ -125,7 +126,15 @@ class UpcomingViewModel(
         }
     }
 
+    private fun isFresh(lastUpdated: Long?): Boolean =
+        lastUpdated != null &&
+            System.currentTimeMillis() - lastUpdated < AUTO_REFRESH_INTERVAL_MS
+
     companion object {
+        // The calendar only changes when episodes air or lists change, so it
+        // does not need to be re-fetched every time the screen becomes visible.
+        private const val AUTO_REFRESH_INTERVAL_MS = 30 * 60 * 1000L
+
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 UpcomingViewModel(
