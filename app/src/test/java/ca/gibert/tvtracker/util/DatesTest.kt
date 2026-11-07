@@ -5,8 +5,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
 
 class DatesTest {
@@ -73,5 +75,33 @@ class DatesTest {
 
         assertEquals(LocalDate.of(2024, 5, 6), instant.localDate(ZoneOffset.UTC))
         assertEquals(LocalDate.of(2024, 5, 7), instant.localDate(ZoneOffset.ofHours(2)))
+    }
+
+    @Test
+    fun `month calendar includes whole weeks around the month`() {
+        val days = monthCalendarDays(YearMonth.of(2024, 5), DayOfWeek.MONDAY)
+
+        assertEquals(LocalDate.of(2024, 4, 29), days.first())
+        assertEquals(LocalDate.of(2024, 6, 2), days.last())
+        assertEquals(0, days.size % 7)
+        assertTrue(days.contains(LocalDate.of(2024, 5, 1)))
+        assertTrue(days.contains(LocalDate.of(2024, 5, 31)))
+        assertTrue(days.zipWithNext().all { (day, next) -> next == day.plusDays(1) })
+    }
+
+    @Test
+    fun `month calendar honours the first day of the week`() {
+        val sundayStart = monthCalendarDays(YearMonth.of(2024, 5), DayOfWeek.SUNDAY)
+
+        assertEquals(LocalDate.of(2024, 4, 28), sundayStart.first())
+        assertEquals(DayOfWeek.SUNDAY, sundayStart.first().dayOfWeek)
+    }
+
+    @Test
+    fun `month calendar handles leap february`() {
+        val days = monthCalendarDays(YearMonth.of(2024, 2), DayOfWeek.MONDAY)
+
+        assertTrue(days.contains(LocalDate.of(2024, 2, 29)))
+        assertEquals(0, days.size % 7)
     }
 }

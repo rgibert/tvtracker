@@ -109,6 +109,23 @@ data class UpNextItem(
 )
 
 @Serializable
+data class WatchedShow(
+    val show: Show,
+    val seasons: List<WatchedSeason> = emptyList(),
+)
+
+@Serializable
+data class WatchedSeason(
+    val number: Int,
+    val episodes: List<WatchedEpisode> = emptyList(),
+)
+
+@Serializable
+data class WatchedEpisode(
+    val number: Int,
+)
+
+@Serializable
 data class WatchlistItem(
     val rank: Int? = null,
     val id: Long? = null,

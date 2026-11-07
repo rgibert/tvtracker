@@ -8,11 +8,16 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
 - **To Watch** – combines Trakt's Up Next feed with shows on your watchlist, so
   every show has one clear next episode.
 - **Coming Up** – episodes airing in the next 14 days for the shows you watch
-  and the shows on your watchlist, grouped by local day.
+  and the shows on your watchlist, grouped by local day. Switch between the
+  list and a month calendar that marks airing days; tap a day to see its
+  episodes.
 - **Show details** – full season and episode list with watched checkboxes, a
   "mark watched" shortcut for the next episode, and per-show progress.
 - **Offline-friendly** – the last list and show details are cached on the device
   and shown (with a "saved data" banner) when Trakt can't be reached.
+- **Light on the Trakt API** – watched progress is fetched in bulk (one
+  paginated request, not one per show), and screens reuse recent snapshots
+  instead of refreshing on every resume.
 - **No account system of its own** – Trakt device-code login, no password ever
   entered into this app, no subscriptions or ads.
 

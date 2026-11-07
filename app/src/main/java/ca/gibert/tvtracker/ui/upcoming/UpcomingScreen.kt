@@ -1,24 +1,34 @@
 package ca.gibert.tvtracker.ui.upcoming
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -27,9 +37,17 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,14 +65,24 @@ import ca.gibert.tvtracker.ui.components.PosterImage
 import ca.gibert.tvtracker.ui.components.ServiceLine
 import ca.gibert.tvtracker.ui.rememberIs24HourClock
 import ca.gibert.tvtracker.ui.theme.GlassSurface
+import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.util.episodeCode
 import ca.gibert.tvtracker.util.formatRelativeDay
 import ca.gibert.tvtracker.util.formatTime
 import ca.gibert.tvtracker.util.localDate
+import ca.gibert.tvtracker.util.monthCalendarDays
 import ca.gibert.tvtracker.util.parseTraktInstant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle as JavaTextStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
+
+private enum class UpcomingViewMode(val label: String) {
+    List("List"),
+    Calendar("Calendar"),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +118,56 @@ fun UpcomingScreen(
             }
             .groupBy { (instant, _) -> instant.localDate() }
             .toSortedMap()
+    }
+
+    var viewMode by rememberSaveable { mutableStateOf(UpcomingViewMode.List) }
+
+    val today = remember { LocalDate.now() }
+    val availableMonths = remember(grouped) {
+        grouped.keys.map(YearMonth::from).distinct().sorted()
+    }
+    val defaultSelectedDate = remember(grouped, today) {
+        grouped.keys.firstOrNull { !it.isBefore(today) }
+            ?: grouped.keys.firstOrNull()
+            ?: today
+    }
+
+    // A negative sentinel means "no explicit selection yet", which lets the
+    // default follow the data when the first refresh arrives.
+    var selectedEpochDay by rememberSaveable { mutableStateOf(-1L) }
+    var shownMonthText by rememberSaveable { mutableStateOf("") }
+    val selectedDate = if (selectedEpochDay >= 0) {
+        LocalDate.ofEpochDay(selectedEpochDay)
+    } else {
+        defaultSelectedDate
+    }
+    val shownMonth = shownMonthText
+        .takeIf { it.isNotBlank() }
+        ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
+        ?.takeIf { it in availableMonths }
+        ?: YearMonth.from(selectedDate)
+
+    val selectedEntries = remember(grouped, selectedDate) {
+        grouped[selectedDate].orEmpty()
+    }
+    val episodeCounts = remember(grouped) {
+        grouped.mapValues { (_, entries) -> entries.size }
+    }
+    val firstMonth = availableMonths.firstOrNull() ?: YearMonth.from(today)
+    val lastMonth = availableMonths.lastOrNull() ?: YearMonth.from(today)
+
+    fun selectDate(date: LocalDate) {
+        selectedEpochDay = date.toEpochDay()
+        shownMonthText = YearMonth.from(date).toString()
+    }
+
+    fun shiftMonth(offset: Long) {
+        val target = shownMonth.plusMonths(offset)
+        if (target !in availableMonths) return
+        shownMonthText = target.toString()
+        grouped.keys.firstOrNull { YearMonth.from(it) == target }?.let { firstOfMonth ->
+            selectedEpochDay = firstOfMonth.toEpochDay()
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -141,7 +219,10 @@ fun UpcomingScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         item(key = "header") {
-                            UpcomingHeader()
+                            UpcomingHeader(
+                                viewMode = viewMode,
+                                onViewModeChange = { viewMode = it },
+                            )
                         }
 
                         if (state.showingCached) {
@@ -150,19 +231,68 @@ fun UpcomingScreen(
                             }
                         }
 
-                        grouped.forEach { (date, entries) ->
-                            item(key = "day_$date") {
-                                DayHeader(date = date, count = entries.size)
+                        when (viewMode) {
+                            UpcomingViewMode.List -> {
+                                grouped.forEach { (date, entries) ->
+                                    item(key = "day_$date") {
+                                        DayHeader(date = date, count = entries.size)
+                                    }
+                                    items(
+                                        items = entries,
+                                        key = { (_, item) ->
+                                            "calendar_${item.show.ids.trakt}_${
+                                                item.episode.ids.trakt
+                                            }"
+                                        },
+                                    ) { (instant, item) ->
+                                        UpcomingRow(
+                                            item = item,
+                                            time = formatTime(instant, is24Hour),
+                                            onClick = { onOpenShow(item.show.ids.trakt) },
+                                        )
+                                    }
+                                }
                             }
-                            items(
-                                items = entries,
-                                key = { (_, item) -> "calendar_${item.show.ids.trakt}_${item.episode.ids.trakt}" },
-                            ) { (instant, item) ->
-                                UpcomingRow(
-                                    item = item,
-                                    time = formatTime(instant, is24Hour),
-                                    onClick = { onOpenShow(item.show.ids.trakt) },
-                                )
+
+                            UpcomingViewMode.Calendar -> {
+                                item(key = "calendar-grid") {
+                                    UpcomingCalendarCard(
+                                        month = shownMonth,
+                                        selectedDate = selectedDate,
+                                        today = today,
+                                        episodeCounts = episodeCounts,
+                                        canGoPrevious = shownMonth > firstMonth,
+                                        canGoNext = shownMonth < lastMonth,
+                                        onPrevious = { shiftMonth(-1) },
+                                        onNext = { shiftMonth(1) },
+                                        onSelectDate = ::selectDate,
+                                    )
+                                }
+
+                                item(key = "selected-day-$selectedDate") {
+                                    DayHeader(date = selectedDate, count = selectedEntries.size)
+                                }
+
+                                if (selectedEntries.isEmpty()) {
+                                    item(key = "selected-day-empty") {
+                                        CalendarEmptyDay()
+                                    }
+                                } else {
+                                    items(
+                                        items = selectedEntries,
+                                        key = { (_, item) ->
+                                            "selected_${item.show.ids.trakt}_${
+                                                item.episode.ids.trakt
+                                            }"
+                                        },
+                                    ) { (instant, item) ->
+                                        UpcomingRow(
+                                            item = item,
+                                            time = formatTime(instant, is24Hour),
+                                            onClick = { onOpenShow(item.show.ids.trakt) },
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -184,7 +314,10 @@ fun UpcomingScreen(
 }
 
 @Composable
-private fun UpcomingHeader() {
+private fun UpcomingHeader(
+    viewMode: UpcomingViewMode,
+    onViewModeChange: (UpcomingViewMode) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -199,6 +332,253 @@ private fun UpcomingHeader() {
         Text(
             text = "Coming Up",
             style = MaterialTheme.typography.headlineLarge,
+        )
+        Spacer(Modifier.height(10.dp))
+        ViewModeToggle(selected = viewMode, onSelect = onViewModeChange)
+    }
+}
+
+@Composable
+private fun ViewModeToggle(
+    selected: UpcomingViewMode,
+    onSelect: (UpcomingViewMode) -> Unit,
+) {
+    val zen = LocalZenColors.current
+    val colors = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(zen.mutedFill)
+            .border(1.dp, zen.glassBorder, CircleShape)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        UpcomingViewMode.entries.forEach { mode ->
+            val isSelected = mode == selected
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .then(
+                        if (isSelected) {
+                            Modifier.background(zen.iridescentBrush)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .selectable(
+                        selected = isSelected,
+                        role = Role.Tab,
+                        onClick = { onSelect(mode) },
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = mode.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isSelected) zen.onAccent else colors.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingCalendarCard(
+    month: YearMonth,
+    selectedDate: LocalDate,
+    today: LocalDate,
+    episodeCounts: Map<LocalDate, Int>,
+    canGoPrevious: Boolean,
+    canGoNext: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+) {
+    val locale = Locale.getDefault()
+    val firstDayOfWeek = remember(locale) { WeekFields.of(locale).firstDayOfWeek }
+    val days = remember(month, firstDayOfWeek) { monthCalendarDays(month, firstDayOfWeek) }
+    val weekdayLabels = remember(firstDayOfWeek, locale) {
+        (0L until 7L).map { offset ->
+            firstDayOfWeek.plus(offset).getDisplayName(JavaTextStyle.SHORT, locale)
+        }
+    }
+    val monthLabel = remember(month, locale) {
+        month.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
+    }
+
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MonthArrow(
+                    enabled = canGoPrevious,
+                    description = "Previous month",
+                    icon = Icons.Outlined.ChevronLeft,
+                    onClick = onPrevious,
+                )
+                Text(
+                    text = monthLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                MonthArrow(
+                    enabled = canGoNext,
+                    description = "Next month",
+                    icon = Icons.Outlined.ChevronRight,
+                    onClick = onNext,
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(Modifier.fillMaxWidth()) {
+                weekdayLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            days.chunked(7).forEach { week ->
+                Row(Modifier.fillMaxWidth()) {
+                    week.forEach { day ->
+                        CalendarDayCell(
+                            day = day,
+                            inMonth = YearMonth.from(day) == month,
+                            selected = day == selectedDate,
+                            isToday = day == today,
+                            episodeCount = episodeCounts[day] ?: 0,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onSelectDate(day) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthArrow(
+    enabled: Boolean,
+    description: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    GlassSurface(
+        modifier = Modifier
+            .size(34.dp)
+            .alpha(if (enabled) 1f else 0.35f),
+        shape = CircleShape,
+        strong = true,
+        onClick = if (enabled) onClick else null,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarDayCell(
+    day: LocalDate,
+    inMonth: Boolean,
+    selected: Boolean,
+    isToday: Boolean,
+    episodeCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val zen = LocalZenColors.current
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+    val textColor = when {
+        selected -> zen.onAccent
+        !inMonth -> colors.onSurfaceVariant.copy(alpha = 0.45f)
+        else -> colors.onSurface
+    }
+
+    Box(
+        modifier = modifier
+            .padding(2.dp)
+            .aspectRatio(1f)
+            .clip(shape)
+            .then(
+                if (selected) {
+                    Modifier.background(zen.iridescentBrush)
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (isToday && !selected) {
+                    Modifier.border(1.dp, zen.glassBorderStrong, shape)
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (inMonth) {
+                    Modifier.selectable(
+                        selected = selected,
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = day.dayOfMonth.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                color = textColor,
+            )
+            if (inMonth && episodeCount > 0) {
+                Spacer(Modifier.height(3.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    repeat(minOf(episodeCount, 3)) {
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .clip(CircleShape)
+                                .background(if (selected) zen.onAccent else colors.primary),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarEmptyDay() {
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Text(
+            text = "No episodes air on this day.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
         )
     }
 }
@@ -222,7 +602,9 @@ private fun DayHeader(date: LocalDate, count: Int) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Pill(text = "$count ${if (count == 1) "episode" else "episodes"}")
+        if (count > 0) {
+            Pill(text = "$count ${if (count == 1) "episode" else "episodes"}")
+        }
     }
 }
 
@@ -317,6 +699,6 @@ private fun LastUpdatedFooter(lastUpdated: Long?) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        textAlign = TextAlign.Center,
     )
 }

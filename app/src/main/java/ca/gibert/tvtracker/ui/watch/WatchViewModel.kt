@@ -49,6 +49,7 @@ class WatchViewModel(
     val events = _events.receiveAsFlow()
 
     private var loadJob: Job? = null
+    private var appliedMutationVersion = 0L
 
     init {
         load(initial = true)
@@ -66,6 +67,12 @@ class WatchViewModel(
         // a refresh is needed.
         viewModelScope.launch { syncHidden() }
         if (_state.value.isLoading || _state.value.isRefreshing) return
+
+        // A local history mutation makes the snapshot stale immediately, even
+        // if the normal refresh interval has not elapsed yet.
+        val hasLocalMutation = repository.mutationVersion != appliedMutationVersion
+        if (!hasLocalMutation && isFresh(_state.value.lastUpdated)) return
+
         load(initial = false)
     }
 
@@ -126,6 +133,7 @@ class WatchViewModel(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             syncHidden()
+            val mutationVersionAtStart = repository.mutationVersion
 
             if (initial) {
                 val cached = repository.cachedToWatch()
@@ -151,6 +159,7 @@ class WatchViewModel(
 
             try {
                 val snapshot = repository.refreshToWatch()
+                appliedMutationVersion = mutationVersionAtStart
                 _state.update {
                     it.copy(
                         items = snapshot.items,
@@ -181,7 +190,13 @@ class WatchViewModel(
         }
     }
 
+    private fun isFresh(lastUpdated: Long?): Boolean =
+        lastUpdated != null &&
+            System.currentTimeMillis() - lastUpdated < AUTO_REFRESH_INTERVAL_MS
+
     companion object {
+        private const val AUTO_REFRESH_INTERVAL_MS = 10 * 60 * 1000L
+
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 WatchViewModel(
