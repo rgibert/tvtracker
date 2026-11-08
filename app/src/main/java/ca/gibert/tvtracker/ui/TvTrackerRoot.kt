@@ -234,19 +234,21 @@ private fun ZenTopBar(
                 color = colors.onSurface,
                 maxLines = 1,
             )
-            Text(
-                text = if (isTab) {
-                    if (currentRoute == Routes.UPCOMING) "Next 14 days" else "Your queue"
-                } else {
-                    if (currentRoute == Routes.SETTINGS) {
-                        "Account & saved data"
+            if (!(isTab && currentRoute == Routes.UPCOMING)) {
+                Text(
+                    text = if (isTab) {
+                        "Your queue"
                     } else {
-                        "Episodes & progress"
-                    }
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceVariant,
-            )
+                        if (currentRoute == Routes.SETTINGS) {
+                            "Account & saved data"
+                        } else {
+                            "Episodes & progress"
+                        }
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant,
+                )
+            }
         }
 
         if (isTab) {

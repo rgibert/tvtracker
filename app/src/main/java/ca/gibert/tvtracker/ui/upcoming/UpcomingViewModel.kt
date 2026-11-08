@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 
 data class UpcomingUiState(
     val items: List<CalendarItem> = emptyList(),
@@ -28,6 +29,10 @@ data class UpcomingUiState(
     val showingCached: Boolean = false,
     val lastUpdated: Long? = null,
     val hiddenIds: Set<Int> = emptySet(),
+    val calendarMonths: Map<YearMonth, List<CalendarItem>> = emptyMap(),
+    val calendarFetchedAt: Map<YearMonth, Long> = emptyMap(),
+    val loadingMonths: Set<YearMonth> = emptySet(),
+    val calendarErrors: Map<YearMonth, String> = emptyMap(),
 )
 
 class UpcomingViewModel(
@@ -48,6 +53,79 @@ class UpcomingViewModel(
     }
 
     fun refresh() = load(initial = false, userInitiated = true)
+
+    /**
+     * Loads a whole month for the calendar view, reusing a recent in-memory or
+     * disk snapshot when possible. Pull-to-refresh passes [force] to bypass
+     * that window.
+     */
+    fun loadCalendarMonth(month: YearMonth, force: Boolean = false) {
+        if (month in _state.value.loadingMonths) return
+        if (!force && isCalendarMonthFresh(_state.value, month)) return
+
+        // Mark the month as in-flight before launching so two effects reacting
+        // to the same month cannot start duplicate requests.
+        _state.update {
+            it.copy(
+                loadingMonths = it.loadingMonths + month,
+                calendarErrors = it.calendarErrors - month,
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                if (_state.value.calendarMonths[month] == null) {
+                    repository.cachedUpcomingMonth(month)?.let { cached ->
+                        _state.update {
+                            it.copy(
+                                calendarMonths = it.calendarMonths + (month to cached.items),
+                                calendarFetchedAt = it.calendarFetchedAt +
+                                    (month to cached.fetchedAt),
+                            )
+                        }
+                    }
+                }
+
+                if (!force && isCalendarMonthFresh(_state.value, month)) return@launch
+
+                val snapshot = repository.refreshUpcomingMonth(month)
+                _state.update {
+                    it.copy(
+                        calendarMonths = it.calendarMonths + (month to snapshot.items),
+                        calendarFetchedAt = it.calendarFetchedAt +
+                            (month to snapshot.fetchedAt),
+                        calendarErrors = it.calendarErrors - month,
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                val message = friendlyError(error)
+                val hasData = _state.value.calendarMonths[month] != null
+                _state.update {
+                    it.copy(
+                        calendarErrors = if (hasData) {
+                            it.calendarErrors - month
+                        } else {
+                            it.calendarErrors + (month to message)
+                        },
+                    )
+                }
+                if (hasData) _messages.send(message)
+            } finally {
+                _state.update { it.copy(loadingMonths = it.loadingMonths - month) }
+            }
+        }
+    }
+
+    /**
+     * Resume hook for the calendar view. It only refreshes the visible month,
+     * not the separate two-week list, so a calendar resume costs one request.
+     */
+    fun onCalendarResume(month: YearMonth) {
+        viewModelScope.launch { syncHidden() }
+        loadCalendarMonth(month)
+    }
 
     /**
      * Called when the screen becomes visible again (for example after returning
@@ -129,6 +207,12 @@ class UpcomingViewModel(
     private fun isFresh(lastUpdated: Long?): Boolean =
         lastUpdated != null &&
             System.currentTimeMillis() - lastUpdated < AUTO_REFRESH_INTERVAL_MS
+
+    private fun isCalendarMonthFresh(state: UpcomingUiState, month: YearMonth): Boolean {
+        if (state.calendarMonths[month] == null) return false
+        val fetchedAt = state.calendarFetchedAt[month] ?: return false
+        return System.currentTimeMillis() - fetchedAt < AUTO_REFRESH_INTERVAL_MS
+    }
 
     companion object {
         // The calendar only changes when episodes air or lists change, so it

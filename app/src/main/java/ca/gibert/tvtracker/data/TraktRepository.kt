@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicLong
@@ -72,20 +73,51 @@ class TraktRepository(
 
     suspend fun cachedUpcoming(): CachedUpcoming? = cache.readUpcoming()
 
+    suspend fun cachedUpcomingMonth(month: YearMonth): CachedUpcoming? =
+        cache.readUpcomingMonth(month)
+
     suspend fun refreshUpcoming(): CachedUpcoming {
         val today = LocalDate.now()
-        val todayUtc = LocalDate.now(ZoneOffset.UTC)
-        val requestStart = todayUtc.minusDays(1)
+        val snapshot = fetchUpcoming(
+            // Extra days absorb time-zone differences between Trakt's UTC
+            // calendar and the device's local calendar.
+            requestStart = LocalDate.now(ZoneOffset.UTC).minusDays(1),
+            requestDays = CALENDAR_REQUEST_DAYS,
+            rangeStart = today,
+            rangeEnd = today.plusDays(CALENDAR_DAYS),
+        )
+        cache.writeUpcoming(snapshot)
+        return snapshot
+    }
 
-        // Extra days absorb time-zone differences between Trakt's UTC calendar
-        // and the device's local calendar.
+    /**
+     * Loads every episode airing in [month]. The calendar view asks for these
+     * on demand as the user moves from one month to the next, so it no longer
+     * has to fetch a wider window up front.
+     */
+    suspend fun refreshUpcomingMonth(month: YearMonth): CachedUpcoming {
+        val snapshot = fetchUpcoming(
+            requestStart = month.atDay(1).minusDays(1),
+            requestDays = month.lengthOfMonth() + 3,
+            rangeStart = month.atDay(1),
+            rangeEnd = month.atEndOfMonth(),
+        )
+        cache.writeUpcomingMonth(month, snapshot)
+        return snapshot
+    }
+
+    private suspend fun fetchUpcoming(
+        requestStart: LocalDate,
+        requestDays: Int,
+        rangeStart: LocalDate,
+        rangeEnd: LocalDate,
+    ): CachedUpcoming {
         val raw = api.myCalendar(
             startDate = requestStart.toString(),
-            days = CALENDAR_REQUEST_DAYS,
+            days = requestDays,
             extended = EXTENDED,
         )
 
-        val end = today.plusDays(CALENDAR_DAYS)
         val items = raw
             .filter { item ->
                 val date = runCatching {
@@ -93,16 +125,14 @@ class TraktRepository(
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate()
                 }.getOrNull() ?: return@filter false
-                !date.isBefore(today) && !date.isAfter(end)
+                !date.isBefore(rangeStart) && !date.isAfter(rangeEnd)
             }
             .sortedBy { it.firstAired }
 
-        val snapshot = CachedUpcoming(
+        return CachedUpcoming(
             items = items,
             fetchedAt = System.currentTimeMillis(),
         )
-        cache.writeUpcoming(snapshot)
-        return snapshot
     }
 
     suspend fun cachedShowDetail(showId: Int): ShowDetail? = cache.readShowDetail(showId)

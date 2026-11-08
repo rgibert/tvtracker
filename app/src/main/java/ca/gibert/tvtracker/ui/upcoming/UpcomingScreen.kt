@@ -3,6 +3,7 @@ package ca.gibert.tvtracker.ui.upcoming
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +86,9 @@ private enum class UpcomingViewMode(val label: String) {
     Calendar("Calendar"),
 }
 
+private const val CALENDAR_MONTHS_AHEAD = 12L
+private const val MONTH_SWIPE_THRESHOLD = 80f
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpcomingScreen(
@@ -94,10 +99,6 @@ fun UpcomingScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val is24Hour = rememberIs24HourClock()
-
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.onResume()
-    }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -123,9 +124,10 @@ fun UpcomingScreen(
     var viewMode by rememberSaveable { mutableStateOf(UpcomingViewMode.List) }
 
     val today = remember { LocalDate.now() }
-    val availableMonths = remember(grouped) {
-        grouped.keys.map(YearMonth::from).distinct().sorted()
-    }
+    val currentMonth = remember(today) { YearMonth.from(today) }
+    val monthLimit = remember(currentMonth) { currentMonth.plusMonths(CALENDAR_MONTHS_AHEAD) }
+    val calendarMode = viewMode == UpcomingViewMode.Calendar
+
     val defaultSelectedDate = remember(grouped, today) {
         grouped.keys.firstOrNull { !it.isBefore(today) }
             ?: grouped.keys.firstOrNull()
@@ -144,17 +146,36 @@ fun UpcomingScreen(
     val shownMonth = shownMonthText
         .takeIf { it.isNotBlank() }
         ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
-        ?.takeIf { it in availableMonths }
+        ?.takeIf { !it.isBefore(currentMonth) && !it.isAfter(monthLimit) }
         ?: YearMonth.from(selectedDate)
 
-    val selectedEntries = remember(grouped, selectedDate) {
-        grouped[selectedDate].orEmpty()
+    // Seed the displayed month from the two-week list while its full-month
+    // snapshot loads, so switching to the calendar shows data immediately.
+    val calendarSource = remember(state.calendarMonths, shownMonth, items, state.hiddenIds) {
+        (state.calendarMonths[shownMonth] ?: items)
+            .filter { it.show.ids.trakt !in state.hiddenIds }
     }
-    val episodeCounts = remember(grouped) {
-        grouped.mapValues { (_, entries) -> entries.size }
+    val calendarGrouped = remember(calendarSource, shownMonth) {
+        calendarSource
+            .mapNotNull { item ->
+                val instant = parseTraktInstant(item.firstAired) ?: return@mapNotNull null
+                val date = instant.localDate()
+                if (YearMonth.from(date) == shownMonth) date to (instant to item) else null
+            }
+            .groupBy({ it.first }, { it.second })
+            .toSortedMap()
     }
-    val firstMonth = availableMonths.firstOrNull() ?: YearMonth.from(today)
-    val lastMonth = availableMonths.lastOrNull() ?: YearMonth.from(today)
+
+    val selectedEntries = remember(calendarGrouped, selectedDate) {
+        calendarGrouped[selectedDate].orEmpty()
+    }
+    val episodeCounts = remember(calendarGrouped) {
+        calendarGrouped.mapValues { (_, entries) -> entries.size }
+    }
+    val calendarLoading = shownMonth in state.loadingMonths
+    val calendarError = state.calendarErrors[shownMonth]
+    val canGoPrevious = shownMonth > currentMonth
+    val canGoNext = shownMonth < monthLimit
 
     fun selectDate(date: LocalDate) {
         selectedEpochDay = date.toEpochDay()
@@ -163,27 +184,71 @@ fun UpcomingScreen(
 
     fun shiftMonth(offset: Long) {
         val target = shownMonth.plusMonths(offset)
-        if (target !in availableMonths) return
+        if (target < currentMonth || target > monthLimit) return
         shownMonthText = target.toString()
-        grouped.keys.firstOrNull { YearMonth.from(it) == target }?.let { firstOfMonth ->
-            selectedEpochDay = firstOfMonth.toEpochDay()
+
+        val firstAiring = state.calendarMonths[target]
+            .orEmpty()
+            .mapNotNull { parseTraktInstant(it.firstAired)?.localDate() }
+            .filter { YearMonth.from(it) == target }
+            .minOrNull()
+        selectedEpochDay = when {
+            target == currentMonth -> today.toEpochDay()
+            firstAiring != null -> firstAiring.toEpochDay()
+            else -> target.atDay(1).toEpochDay()
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (calendarMode) {
+            viewModel.onCalendarResume(shownMonth)
+        } else {
+            viewModel.onResume()
+        }
+    }
+
+    LaunchedEffect(calendarMode, shownMonth) {
+        if (calendarMode) {
+            viewModel.loadCalendarMonth(shownMonth)
+        }
+    }
+
+    LaunchedEffect(calendarMode) {
+        if (!calendarMode) viewModel.onResume()
+    }
+
+    // When a future month finishes loading, move the placeholder selection on
+    // the first day to the first day that actually has an episode.
+    LaunchedEffect(calendarGrouped, shownMonth) {
+        if (selectedEpochDay == shownMonth.atDay(1).toEpochDay() &&
+            calendarGrouped[selectedDate].isNullOrEmpty()
+        ) {
+            calendarGrouped.keys.firstOrNull()?.let { firstAiring ->
+                selectedEpochDay = firstAiring.toEpochDay()
+            }
         }
     }
 
     Box(Modifier.fillMaxSize()) {
         PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = viewModel::refresh,
+            isRefreshing = if (calendarMode) calendarLoading else state.isRefreshing,
+            onRefresh = {
+                if (calendarMode) {
+                    viewModel.loadCalendarMonth(shownMonth, force = true)
+                } else {
+                    viewModel.refresh()
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         ) {
             when {
-                state.isLoading && items.isEmpty() -> {
+                !calendarMode && state.isLoading && items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
 
-                items.isEmpty() && state.errorMessage != null -> {
+                !calendarMode && items.isEmpty() && state.errorMessage != null -> {
                     ErrorState(
                         message = state.errorMessage.orEmpty(),
                         onRetry = viewModel::refresh,
@@ -191,7 +256,7 @@ fun UpcomingScreen(
                     )
                 }
 
-                items.isEmpty() -> {
+                !calendarMode && items.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = Icons.Outlined.CalendarMonth,
@@ -261,36 +326,76 @@ fun UpcomingScreen(
                                         selectedDate = selectedDate,
                                         today = today,
                                         episodeCounts = episodeCounts,
-                                        canGoPrevious = shownMonth > firstMonth,
-                                        canGoNext = shownMonth < lastMonth,
+                                        canGoPrevious = canGoPrevious,
+                                        canGoNext = canGoNext,
                                         onPrevious = { shiftMonth(-1) },
                                         onNext = { shiftMonth(1) },
                                         onSelectDate = ::selectDate,
                                     )
                                 }
 
-                                item(key = "selected-day-$selectedDate") {
-                                    DayHeader(date = selectedDate, count = selectedEntries.size)
-                                }
-
-                                if (selectedEntries.isEmpty()) {
-                                    item(key = "selected-day-empty") {
-                                        CalendarEmptyDay()
+                                when {
+                                    calendarLoading && calendarGrouped.isEmpty() -> {
+                                        item(key = "calendar-loading") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 24.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                CircularProgressIndicator()
+                                            }
+                                        }
                                     }
-                                } else {
-                                    items(
-                                        items = selectedEntries,
-                                        key = { (_, item) ->
-                                            "selected_${item.show.ids.trakt}_${
-                                                item.episode.ids.trakt
-                                            }"
-                                        },
-                                    ) { (instant, item) ->
-                                        UpcomingRow(
-                                            item = item,
-                                            time = formatTime(instant, is24Hour),
-                                            onClick = { onOpenShow(item.show.ids.trakt) },
-                                        )
+
+                                    calendarError != null && calendarGrouped.isEmpty() -> {
+                                        item(key = "calendar-error-$shownMonth") {
+                                            ErrorState(
+                                                message = calendarError,
+                                                onRetry = {
+                                                    viewModel.loadCalendarMonth(
+                                                        shownMonth,
+                                                        force = true,
+                                                    )
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    else -> {
+                                        item(key = "selected-day-$selectedDate") {
+                                            DayHeader(
+                                                date = selectedDate,
+                                                count = selectedEntries.size,
+                                            )
+                                        }
+
+                                        if (selectedEntries.isEmpty()) {
+                                            item(key = "selected-day-empty") {
+                                                CalendarEmptyDay(
+                                                    message = if (calendarGrouped.isEmpty()) {
+                                                        "No episodes air this month."
+                                                    } else {
+                                                        "No episodes air on this day."
+                                                    },
+                                                )
+                                            }
+                                        } else {
+                                            items(
+                                                items = selectedEntries,
+                                                key = { (_, item) ->
+                                                    "selected_${item.show.ids.trakt}_${
+                                                        item.episode.ids.trakt
+                                                    }"
+                                                },
+                                            ) { (instant, item) ->
+                                                UpcomingRow(
+                                                    item = item,
+                                                    time = formatTime(instant, is24Hour),
+                                                    onClick = { onOpenShow(item.show.ids.trakt) },
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -406,9 +511,25 @@ private fun UpcomingCalendarCard(
     val monthLabel = remember(month, locale) {
         month.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
     }
+    val swipeModifier = Modifier.pointerInput(month, canGoPrevious, canGoNext) {
+        var dragDistance = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { dragDistance = 0f },
+            onHorizontalDrag = { _, dragAmount -> dragDistance += dragAmount },
+            onDragEnd = {
+                when {
+                    dragDistance <= -MONTH_SWIPE_THRESHOLD && canGoNext -> onNext()
+                    dragDistance >= MONTH_SWIPE_THRESHOLD && canGoPrevious -> onPrevious()
+                }
+            },
+            onDragCancel = { dragDistance = 0f },
+        )
+    }
 
     GlassSurface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(swipeModifier),
         shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
@@ -569,13 +690,13 @@ private fun CalendarDayCell(
 }
 
 @Composable
-private fun CalendarEmptyDay() {
+private fun CalendarEmptyDay(message: String = "No episodes air on this day.") {
     GlassSurface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
     ) {
         Text(
-            text = "No episodes air on this day.",
+            text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
