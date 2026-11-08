@@ -75,6 +75,12 @@ jobs:
           TRAKT_KEYSTORE_PASSWORD: ${{ secrets.TRAKT_KEYSTORE_PASSWORD }}
           TRAKT_KEY_ALIAS: ${{ secrets.TRAKT_KEY_ALIAS }}
           TRAKT_KEY_PASSWORD: ${{ secrets.TRAKT_KEY_PASSWORD }}
+          # Sentry Size Analysis: every APK assembled here (debug on pull
+          # requests, debug and release on tags) is uploaded when the token
+          # is set. Fork pull requests get no secrets and skip the upload.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
           # Release APKs are only worth building for a version tag; pull
           # requests ship the debug artifact instead.
