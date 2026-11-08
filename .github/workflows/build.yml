@@ -65,11 +65,13 @@ jobs:
       - name: Run unit tests
         env:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
       - name: Build and lint
         env:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           TRAKT_KEYSTORE_PASSWORD: ${{ secrets.TRAKT_KEYSTORE_PASSWORD }}
           TRAKT_KEY_ALIAS: ${{ secrets.TRAKT_KEY_ALIAS }}
           TRAKT_KEY_PASSWORD: ${{ secrets.TRAKT_KEY_PASSWORD }}

@@ -26,6 +26,19 @@ val escapedTraktClientId = traktClientId
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
+// Optional build-time Sentry DSN. Sentry stays disabled when none is supplied.
+// Precedence: -PsentryDsn > SENTRY_DSN env > local.properties.
+val sentryDsn = (
+    providers.gradleProperty("sentryDsn").orNull
+        ?: providers.environmentVariable("SENTRY_DSN").orNull
+        ?: localProperties.getProperty("sentry.dsn")
+        ?: ""
+).trim()
+
+val escapedSentryDsn = sentryDsn
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 val releaseKeystorePath = providers.environmentVariable("TRAKT_KEYSTORE_FILE").orNull
 
 fun versionCodeFor(versionName: String): Int {
@@ -69,6 +82,13 @@ android {
             "String",
             "DEFAULT_TRAKT_CLIENT_ID",
             "\"$escapedTraktClientId\"",
+        )
+
+        // Empty when not supplied at build time, which disables Sentry.
+        buildConfigField(
+            "String",
+            "SENTRY_DSN",
+            "\"$escapedSentryDsn\"",
         )
     }
 
@@ -145,6 +165,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.sentry.android.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)

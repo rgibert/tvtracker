@@ -71,6 +71,23 @@ Precedence is `-PtraktClientId` → `TRAKT_CLIENT_ID` env var →
 first launch. The value is compiled into `BuildConfig`; it is a public app
 identifier, not a secret.
 
+### Sentry DSN at build time
+
+Crash and error reporting through [Sentry](https://sentry.io) is enabled only
+when a DSN is supplied at build time:
+
+```sh
+SENTRY_DSN=https://key@o0.ingest.sentry.io/0 ./gradlew :app:assembleDebug
+# or
+./gradlew :app:assembleDebug -PsentryDsn=https://key@o0.ingest.sentry.io/0
+```
+
+You can also add `sentry.dsn=...` to `local.properties`. Precedence is
+`-PsentryDsn` → `SENTRY_DSN` env var → `local.properties`. Without a DSN the
+SDK is never initialised. Events are tagged with the build type as the
+environment (`debug` / `release`) and `ca.gibert.tvtracker@<versionName>+<versionCode>`
+as the release; default PII (IP address, user info) is not sent.
+
 Then build or install:
 
 ```sh
@@ -107,6 +124,9 @@ The tag drives the app version: `v0.1.0` becomes `versionName` `0.1.0`, and
 
 Add a repository secret named `TRAKT_CLIENT_ID` so CI builds skip the Client ID
 setup screen. Without it, the APK still works but asks for a Client ID.
+
+Add a repository secret named `SENTRY_DSN` to enable Sentry in CI builds.
+Without it, the APK is built with Sentry disabled.
 
 The debug APK is installable as-is, signed with the Android debug key. To sign
 the release APK, create a keystore once:
