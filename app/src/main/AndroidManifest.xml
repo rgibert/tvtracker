@@ -12,6 +12,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TvTracker">
 
+        <!-- Sentry is initialised in TvTrackerApp so it only runs when a DSN
+             was supplied at build time. -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
