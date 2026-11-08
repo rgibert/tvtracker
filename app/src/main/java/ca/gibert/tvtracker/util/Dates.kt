@@ -1,12 +1,15 @@
 package ca.gibert.tvtracker.util
 
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
 
 fun parseTraktInstant(value: String?): Instant? {
@@ -49,6 +52,23 @@ fun formatFullDate(instant: Instant, zone: ZoneId = ZoneId.systemDefault()): Str
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         .withLocale(Locale.getDefault())
         .format(instant.atZone(zone).toLocalDate())
+
+/**
+ * Every day cell shown for [month] in a month grid, including the trailing days
+ * of the previous month and leading days of the next so that each row has seven
+ * entries. The grid starts on [firstDayOfWeek] (Monday by default outside the
+ * US) and grows to as many whole weeks as the month needs.
+ */
+fun monthCalendarDays(
+    month: YearMonth,
+    firstDayOfWeek: DayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek,
+): List<LocalDate> {
+    val firstOfMonth = month.atDay(1)
+    val leadingDays = (firstOfMonth.dayOfWeek.value - firstDayOfWeek.value + 7) % 7
+    val cellCount = ((leadingDays + month.lengthOfMonth() + 6) / 7) * 7
+    val gridStart = firstOfMonth.minusDays(leadingDays.toLong())
+    return (0 until cellCount).map { gridStart.plusDays(it.toLong()) }
+}
 
 fun formatTime(instant: Instant, is24Hour: Boolean, zone: ZoneId = ZoneId.systemDefault()): String {
     val pattern = if (is24Hour) "HH:mm" else "h:mm a"

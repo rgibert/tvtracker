@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.time.YearMonth
 
 /**
  * Small JSON-file cache. It is deliberately simpler than a database: these are
@@ -32,6 +33,12 @@ class CacheStore(
 
     suspend fun writeUpcoming(value: CachedUpcoming) =
         write(UPCOMING_FILE, CachedUpcoming.serializer(), value)
+
+    suspend fun readUpcomingMonth(month: YearMonth): CachedUpcoming? =
+        read(upcomingMonthFile(month), CachedUpcoming.serializer())
+
+    suspend fun writeUpcomingMonth(month: YearMonth, value: CachedUpcoming) =
+        write(upcomingMonthFile(month), CachedUpcoming.serializer(), value)
 
     suspend fun readShowDetail(showId: Int): ShowDetail? =
         read(detailFile(showId), ShowDetail.serializer())
@@ -72,6 +79,8 @@ class CacheStore(
         }
 
     private fun detailFile(showId: Int) = "show_$showId.json"
+
+    private fun upcomingMonthFile(month: YearMonth) = "upcoming_$month.json"
 
     private companion object {
         const val TO_WATCH_FILE = "to_watch.json"
