@@ -91,10 +91,11 @@ Run the checks with:
 
 `.github/workflows/build.yml` runs when a version tag is pushed (`v*`) and for
 pull requests against `main`. Tag builds publish the debug and release APKs on
-a GitHub **Release**. Pull request builds publish a pre-release tagged
-`pr-<number>-<sha>` and leave a comment on the PR linking to it, so the test APK
-is easy to find. Fork pull requests only upload the debug APK to the workflow
-run's **Artifacts**, because their token cannot write releases or comments.
+a GitHub **Release**. Pull request builds upload the debug APK as the
+`tv-tracker-debug` workflow artifact and leave a comment on the PR linking to
+it, so the test APK is easy to find without creating a tag or pre-release.
+Fork pull requests only upload the artifact, because their token cannot write
+comments.
 
 All builds run the unit tests and lint and upload the APKs to the workflow run's
 **Artifacts**.
