@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -69,7 +71,10 @@ import ca.gibert.tvtracker.ui.components.EpisodeStill
 import ca.gibert.tvtracker.ui.components.ErrorState
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.components.PosterImage
+import ca.gibert.tvtracker.ui.components.ServiceBadge
 import ca.gibert.tvtracker.ui.components.ShowBackdrop
+import ca.gibert.tvtracker.ui.components.launchIntentFor
+import ca.gibert.tvtracker.ui.components.streamingAppFor
 import ca.gibert.tvtracker.ui.theme.GlassSurface
 import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.util.episodeCode
@@ -167,6 +172,13 @@ private fun DetailContent(
                 }
                 ShowHero(detail)
             }
+        }
+
+        item(key = "open_app") {
+            OpenInAppRow(
+                network = detail.show.network,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
         }
 
         item(key = "list_visibility") {
@@ -382,6 +394,51 @@ private fun ShowHero(detail: ShowDetail) {
                     drawStopIndicator = {},
                 )
             }
+        }
+    }
+}
+
+/**
+ * "Open in <service>" for the show's network, shown only when that service's
+ * app is installed. There's no per-title deep link we can rely on across
+ * services, so this opens the app's home screen.
+ */
+@Composable
+private fun OpenInAppRow(
+    network: String?,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val app = remember(network) { streamingAppFor(network) } ?: return
+    val launchIntent = remember(app) { launchIntentFor(context, app) } ?: return
+    val colors = MaterialTheme.colorScheme
+
+    GlassSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        onClick = {
+            // The app can be uninstalled between composition and the tap.
+            runCatching { context.startActivity(launchIntent) }
+        },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ServiceBadge(network = network.orEmpty(), size = 20.dp)
+            Spacer(Modifier.width(13.dp))
+            Text(
+                text = "Open in ${app.name}",
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
