@@ -136,6 +136,21 @@ setup screen. Without it, the APK still works but asks for a Client ID.
 Add a repository secret named `SENTRY_DSN` to enable Sentry in CI builds.
 Without it, the APK is built with Sentry disabled.
 
+CI also uploads every APK it builds to
+[Sentry Size Analysis](https://docs.sentry.io/product/size-analysis/): the
+debug APK for pull requests, and the debug and release APKs for version tags.
+Builds are compared per variant (`debug` against `debug`, `release` against
+`release`). To turn it on, add:
+
+- a repository secret `SENTRY_AUTH_TOKEN` – a Sentry auth token (an
+  organization token works) that can upload builds
+- repository variables `SENTRY_ORG` and `SENTRY_PROJECT` – your Sentry
+  organization and project slugs
+
+Without the token, the upload is skipped, as it is for local builds and fork
+pull requests. A failed upload is logged but does not fail the build. Install
+the Sentry GitHub app to get size status checks on pull requests.
+
 The debug APK is installable as-is, signed with the Android debug key. To sign
 the release APK, create a keystore once:
 

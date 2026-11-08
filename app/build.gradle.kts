@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.sentry.android.gradle)
 }
 
 // Optional build-time Trakt Client ID. Client IDs are public app identifiers,
@@ -140,6 +141,37 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+}
+
+// Sentry Size Analysis. The Gradle plugin is used only to upload every APK
+// assembled in CI (debug and release) for size analysis; the SDK itself is the
+// explicit sentry-android-core dependency below.
+val sentryAuthToken = providers.environmentVariable("SENTRY_AUTH_TOKEN").orNull?.trim().orEmpty()
+
+sentry {
+    // Keep the built APKs exactly as declared: no auto-added Sentry
+    // integrations, no bytecode instrumentation, and no ProGuard mapping
+    // UUID/upload (which would need an auth token on every release build).
+    autoInstallation { enabled.set(false) }
+    tracingInstrumentation { enabled.set(false) }
+    includeProguardMapping.set(false)
+
+    // Upload only from GitHub Actions and only when an auth token is
+    // available, so local builds and fork pull requests (no secrets) still
+    // build normally. Org and project come from SENTRY_ORG / SENTRY_PROJECT.
+    // GitHub metadata (SHAs, refs, PR number) is detected automatically.
+    sizeAnalysis {
+        enabled.set(
+            providers.environmentVariable("GITHUB_ACTIONS").isPresent &&
+                sentryAuthToken.isNotEmpty(),
+        )
+    }
+}
+
+// A Sentry outage or misconfiguration should not block a PR build or a
+// release; the upload's output still shows in the build log.
+tasks.withType<io.sentry.android.gradle.tasks.SentryUploadAppArtifactTask>().configureEach {
+    isIgnoreExitValue = true
 }
 
 dependencies {
