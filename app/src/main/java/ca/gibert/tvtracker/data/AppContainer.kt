@@ -63,6 +63,10 @@ class AppContainer(context: Context) {
 
     val hiddenShowStore = HiddenShowStore(context = context, json = json)
 
+    val networkOverrideStore = NetworkOverrideStore(context = context, json = json)
+
+    val plexSettingsStore = PlexSettingsStore(context)
+
     val traktRepository = TraktRepository(
         api = traktApi,
         cache = cacheStore,
@@ -77,12 +81,14 @@ class AppContainer(context: Context) {
         // removes the settings screen (and its view model) from composition.
         runCatching { cacheStore.clear() }
         runCatching { hiddenShowStore.clear() }
+        runCatching { networkOverrideStore.clear() }
         authRepository.signOut()
     }
 
     suspend fun forgetApiApp() {
         runCatching { cacheStore.clear() }
         runCatching { hiddenShowStore.clear() }
+        runCatching { networkOverrideStore.clear() }
         authRepository.clearClientId()
     }
 

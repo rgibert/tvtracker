@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.DetailEpisode
 import ca.gibert.tvtracker.data.HiddenShowStore
+import ca.gibert.tvtracker.data.NetworkOverrideStore
+import ca.gibert.tvtracker.data.PlexSettingsStore
 import ca.gibert.tvtracker.data.ShowDetail
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.util.friendlyError
@@ -31,12 +33,26 @@ data class ShowDetailUiState(
     val showingCached: Boolean = false,
     val mutatingEpisodeIds: Set<Int> = emptySet(),
     val isHidden: Boolean = false,
-)
+    /** Channel the user pinned for this show, replacing Trakt's network. */
+    val networkOverride: String? = null,
+    /** Saved Plex address for "Open in Plex"; null means Plex's hosted app. */
+    val plexAddress: String? = null,
+) {
+    /** [detail] as displayed: Trakt's data with the pinned channel applied. */
+    val displayDetail: ShowDetail?
+        get() {
+            val detail = detail ?: return null
+            val pinned = networkOverride ?: return detail
+            return detail.copy(show = detail.show.copy(network = pinned))
+        }
+}
 
 class ShowDetailViewModel(
     private val showId: Int,
     private val repository: TraktRepository,
     private val hiddenShows: HiddenShowStore,
+    private val networkOverrides: NetworkOverrideStore,
+    private val plexSettings: PlexSettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowDetailUiState())
@@ -140,10 +156,62 @@ class ShowDetailViewModel(
         }
     }
 
+    /**
+     * Pins the channel shown for this show everywhere in the app, for when
+     * Trakt's network is not where it airs locally (BBC vs. HBO, say). A blank
+     * name, or Trakt's own network, clears the override instead.
+     */
+    fun setNetworkOverride(network: String) {
+        val detail = _state.value.detail ?: return
+        val name = network.trim()
+        val traktNetwork = detail.show.network?.trim().orEmpty()
+        if (name.isEmpty() || name.equals(traktNetwork, ignoreCase = true)) {
+            clearNetworkOverride()
+            return
+        }
+        if (name == _state.value.networkOverride) return
+
+        viewModelScope.launch {
+            try {
+                networkOverrides.set(detail.show, name)
+                _state.update { it.copy(networkOverride = name) }
+                _messages.send("${detail.show.title} now shows as $name")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _messages.send(friendlyError(error))
+            }
+        }
+    }
+
+    /** Goes back to the network Trakt reports for this show. */
+    fun clearNetworkOverride() {
+        if (_state.value.networkOverride == null) return
+        val title = _state.value.detail?.show?.title
+
+        viewModelScope.launch {
+            try {
+                networkOverrides.remove(showId)
+                _state.update { it.copy(networkOverride = null) }
+                if (title != null) _messages.send("$title uses Trakt's channel again")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _messages.send(friendlyError(error))
+            }
+        }
+    }
+
     private fun load(initial: Boolean, userInitiated: Boolean = false) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(isHidden = showId in hiddenShows.readIds()) }
+            _state.update {
+                it.copy(
+                    isHidden = showId in hiddenShows.readIds(),
+                    networkOverride = networkOverrides.readMap()[showId],
+                    plexAddress = plexSettings.readAddress(),
+                )
+            }
 
             if (initial) {
                 val cached = repository.cachedShowDetail(showId)
@@ -253,6 +321,8 @@ class ShowDetailViewModel(
                         showId = showId,
                         repository = container.traktRepository,
                         hiddenShows = container.hiddenShowStore,
+                        networkOverrides = container.networkOverrideStore,
+                        plexSettings = container.plexSettingsStore,
                     )
                 }
             }

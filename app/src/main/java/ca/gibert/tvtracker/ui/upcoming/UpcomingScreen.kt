@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.CalendarItem
+import ca.gibert.tvtracker.data.withNetworkOverride
 import ca.gibert.tvtracker.ui.components.CachedBanner
 import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
@@ -108,8 +109,10 @@ fun UpcomingScreen(
 
     // Items stay unfiltered in state so unhiding works even when the refresh
     // fails; this list is what every section below renders.
-    val items = remember(state.items, state.hiddenIds) {
-        state.items.filter { it.show.ids.trakt !in state.hiddenIds }
+    val items = remember(state.items, state.hiddenIds, state.networkOverrides) {
+        state.items
+            .filter { it.show.ids.trakt !in state.hiddenIds }
+            .map { it.withNetworkOverride(state.networkOverrides) }
     }
 
     val grouped = remember(items) {
@@ -151,9 +154,16 @@ fun UpcomingScreen(
 
     // Seed the displayed month from the two-week list while its full-month
     // snapshot loads, so switching to the calendar shows data immediately.
-    val calendarSource = remember(state.calendarMonths, shownMonth, items, state.hiddenIds) {
+    val calendarSource = remember(
+        state.calendarMonths,
+        shownMonth,
+        items,
+        state.hiddenIds,
+        state.networkOverrides,
+    ) {
         (state.calendarMonths[shownMonth] ?: items)
             .filter { it.show.ids.trakt !in state.hiddenIds }
+            .map { it.withNetworkOverride(state.networkOverrides) }
     }
     val calendarGrouped = remember(calendarSource, shownMonth) {
         calendarSource

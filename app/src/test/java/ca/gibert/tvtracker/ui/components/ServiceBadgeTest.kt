@@ -2,6 +2,7 @@ package ca.gibert.tvtracker.ui.components
 
 import ca.gibert.tvtracker.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -37,6 +38,7 @@ class ServiceBadgeTest {
     fun `apple tv plus resolves to the apple tv mark`() {
         assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple TV+"))
         assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple TV"))
+        assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple"))
     }
 
     @Test
@@ -49,5 +51,12 @@ class ServiceBadgeTest {
     fun `amazon prime video matches either wording`() {
         assertEquals(R.drawable.service_prime_video, serviceLogoFor("Prime Video"))
         assertEquals(R.drawable.service_prime_video, serviceLogoFor("Amazon"))
+    }
+
+    @Test
+    fun `every suggested channel has a bundled logo`() {
+        suggestedServices.forEach { service ->
+            assertNotNull("$service has no logo", serviceLogoFor(service))
+        }
     }
 }

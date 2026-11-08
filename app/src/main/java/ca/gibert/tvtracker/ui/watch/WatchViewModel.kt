@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.HiddenShowStore
+import ca.gibert.tvtracker.data.NetworkOverrideStore
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.data.WatchItem
 import ca.gibert.tvtracker.util.episodeCode
@@ -30,6 +31,8 @@ data class WatchUiState(
     val lastUpdated: Long? = null,
     val markingEpisodeIds: Set<Int> = emptySet(),
     val hiddenIds: Set<Int> = emptySet(),
+    /** Show id → channel the user pinned in place of Trakt's network. */
+    val networkOverrides: Map<Int, String> = emptyMap(),
 )
 
 sealed interface WatchEvent {
@@ -40,6 +43,7 @@ sealed interface WatchEvent {
 class WatchViewModel(
     private val repository: TraktRepository,
     private val hiddenShows: HiddenShowStore,
+    private val networkOverrides: NetworkOverrideStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WatchUiState())
@@ -125,8 +129,11 @@ class WatchViewModel(
     }
 
     private suspend fun syncHidden() {
+        // Both are local preferences edited from other screens (a show's
+        // detail page or Settings), so they are re-read together.
         val hidden = hiddenShows.readIds()
-        _state.update { it.copy(hiddenIds = hidden) }
+        val overrides = networkOverrides.readMap()
+        _state.update { it.copy(hiddenIds = hidden, networkOverrides = overrides) }
     }
 
     private fun load(initial: Boolean, userInitiated: Boolean = false) {
@@ -202,6 +209,7 @@ class WatchViewModel(
                 WatchViewModel(
                     repository = container.traktRepository,
                     hiddenShows = container.hiddenShowStore,
+                    networkOverrides = container.networkOverrideStore,
                 )
             }
         }
