@@ -62,7 +62,12 @@ jobs:
             echo "TRAKT_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
           fi
 
-      - name: Build, test, and lint
+      - name: Run unit tests
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Build and lint
         env:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_KEYSTORE_PASSWORD: ${{ secrets.TRAKT_KEYSTORE_PASSWORD }}
@@ -71,7 +76,7 @@ jobs:
         run: |
           # Release APKs are only worth building for a version tag; pull
           # requests ship the debug artifact instead.
-          tasks=(:app:assembleDebug :app:testDebugUnitTest :app:lintDebug)
+          tasks=(:app:assembleDebug :app:lintDebug)
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             tasks+=(:app:assembleRelease)
           fi
