@@ -72,6 +72,38 @@ internal fun serviceLogoFor(network: String?): Int? {
 }
 
 /**
+ * Channel names offered as one-tap picks when pinning a show's channel.
+ *
+ * Every entry resolves to a bundled logo through [serviceLogoFor] (a unit test
+ * holds this), so a pick always gets a proper badge; anything else can still be
+ * typed in by hand.
+ */
+internal val suggestedServices: List<String> = listOf(
+    "HBO",
+    "Max",
+    "Netflix",
+    "Prime Video",
+    "Apple TV+",
+    "Disney+",
+    "Hulu",
+    "Paramount+",
+    "FX",
+    "AMC",
+    "Showtime",
+    "Starz",
+    "BBC",
+    "CBS",
+    "NBC",
+    "Fox",
+    "Discovery",
+    "Crunchyroll",
+    "Tubi",
+    "Roku",
+    "Plex",
+    "MUBI",
+)
+
+/**
  * A brand tile for a streaming service.
  *
  * The tile is white rather than themed because most marks are dark: an

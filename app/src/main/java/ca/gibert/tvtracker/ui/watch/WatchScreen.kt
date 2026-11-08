@@ -46,6 +46,7 @@ import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.Episode
 import ca.gibert.tvtracker.data.Show
 import ca.gibert.tvtracker.data.WatchItem
+import ca.gibert.tvtracker.data.withNetworkOverride
 import ca.gibert.tvtracker.ui.components.CachedBanner
 import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.ErrorState
@@ -101,7 +102,9 @@ fun WatchScreen(
         ) {
             // Items are kept unfiltered in state so an unhide shows up even when
             // a refresh can't reach Trakt; the list itself is filtered here.
-            val items = state.items.filter { it.show.ids.trakt !in state.hiddenIds }
+            val items = state.items
+                .filter { it.show.ids.trakt !in state.hiddenIds }
+                .map { it.withNetworkOverride(state.networkOverrides) }
 
             when {
                 state.isLoading && items.isEmpty() -> {

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -138,6 +139,29 @@ fun SettingsScreen(
                                 subtitle = "Hidden from To Watch and Coming Up",
                                 onClick = { viewModel.unhide(show) },
                                 trailing = "Show",
+                            )
+                        }
+                }
+            }
+
+            if (state.networkOverrides.isNotEmpty()) {
+                SettingsSection(title = "Pinned channels") {
+                    state.networkOverrides
+                        .sortedBy { it.title.lowercase() }
+                        .forEachIndexed { index, override ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 67.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                        .copy(alpha = 0.5f),
+                                )
+                            }
+                            SettingsRow(
+                                icon = Icons.Outlined.LiveTv,
+                                title = override.title,
+                                subtitle = "Shown as ${override.network}",
+                                onClick = { viewModel.resetNetwork(override) },
+                                trailing = "Reset",
                             )
                         }
                 }

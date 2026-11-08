@@ -13,6 +13,10 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
   tap a day to see what airs then.
 - **Show details** – full season and episode list with watched checkboxes, a
   "mark watched" shortcut for the next episode, and per-show progress.
+- **Pinned channels** – Trakt lists a show's original network (BBC, say), which
+  isn't always where it airs for you (HBO in North America). Tap the channel on
+  a show's page to pin your own; it replaces Trakt's everywhere in the app and
+  can be reset there or under **Settings → Pinned channels**.
 - **Offline-friendly** – the last list and show details are cached on the device
   and shown (with a "saved data" banner) when Trakt can't be reached.
 - **Light on the Trakt API** – watched progress is fetched in bulk (one

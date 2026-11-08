@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,21 +14,28 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -37,13 +46,19 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +69,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
@@ -75,6 +92,7 @@ import ca.gibert.tvtracker.ui.components.ServiceBadge
 import ca.gibert.tvtracker.ui.components.ShowBackdrop
 import ca.gibert.tvtracker.ui.components.launchIntentFor
 import ca.gibert.tvtracker.ui.components.streamingAppFor
+import ca.gibert.tvtracker.ui.components.suggestedServices
 import ca.gibert.tvtracker.ui.theme.GlassSurface
 import ca.gibert.tvtracker.ui.theme.LocalZenColors
 import ca.gibert.tvtracker.util.episodeCode
@@ -93,6 +111,7 @@ fun ShowDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var editingChannel by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -106,7 +125,7 @@ fun ShowDetailScreen(
             onRefresh = viewModel::refresh,
             modifier = Modifier.fillMaxSize(),
         ) {
-            val detail = state.detail
+            val detail = state.displayDetail
             when {
                 state.isLoading && detail == null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -130,9 +149,12 @@ fun ShowDetailScreen(
                         mutatingEpisodeIds = state.mutatingEpisodeIds,
                         showingCached = state.showingCached,
                         isHidden = state.isHidden,
+                        traktNetwork = state.detail?.show?.network,
+                        networkOverride = state.networkOverride,
                         onSelectSeason = viewModel::selectSeason,
                         onToggleEpisode = viewModel::toggleEpisode,
                         onToggleHidden = viewModel::toggleHidden,
+                        onEditChannel = { editingChannel = true },
                     )
                 }
             }
@@ -145,6 +167,22 @@ fun ShowDetailScreen(
                 .padding(16.dp),
         )
     }
+
+    if (editingChannel && state.detail != null) {
+        ChannelDialog(
+            traktNetwork = state.detail?.show?.network,
+            networkOverride = state.networkOverride,
+            onSave = { name ->
+                editingChannel = false
+                viewModel.setNetworkOverride(name)
+            },
+            onReset = {
+                editingChannel = false
+                viewModel.clearNetworkOverride()
+            },
+            onDismiss = { editingChannel = false },
+        )
+    }
 }
 
 @Composable
@@ -154,9 +192,12 @@ private fun DetailContent(
     mutatingEpisodeIds: Set<Int>,
     showingCached: Boolean,
     isHidden: Boolean,
+    traktNetwork: String?,
+    networkOverride: String?,
     onSelectSeason: (Int) -> Unit,
     onToggleEpisode: (DetailEpisode) -> Unit,
     onToggleHidden: () -> Unit,
+    onEditChannel: () -> Unit,
 ) {
     val season = detail.seasons.firstOrNull { it.number == selectedSeason }
 
@@ -174,6 +215,16 @@ private fun DetailContent(
             }
         }
 
+        item(key = "channel") {
+            ChannelRow(
+                traktNetwork = traktNetwork,
+                networkOverride = networkOverride,
+                onClick = onEditChannel,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+
+        // detail carries the pinned channel, so the app matches what is shown.
         item(key = "open_app") {
             OpenInAppRow(
                 network = detail.show.network,
@@ -490,6 +541,153 @@ private fun ListVisibilityRow(
             }
         }
     }
+}
+
+/**
+ * Shows which channel the app credits this show to and opens the picker.
+ *
+ * Trakt reports the original network, which is often not where the show airs
+ * for the viewer, so the subtitle says whether the channel came from Trakt or
+ * was pinned here (and what Trakt says, so the override is never a mystery).
+ */
+@Composable
+private fun ChannelRow(
+    traktNetwork: String?,
+    networkOverride: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val trakt = traktNetwork?.trim()?.takeIf { it.isNotEmpty() }
+    val channel = networkOverride ?: trakt
+
+    GlassSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ServiceBadge(network = channel.orEmpty(), size = 22.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = channel?.let { "Channel: $it" } ?: "Set a channel",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = when {
+                        networkOverride != null && trakt != null ->
+                            "Pinned by you · Trakt lists $trakt"
+
+                        networkOverride != null -> "Pinned by you"
+                        trakt != null -> "From Trakt · tap to pin where it airs for you"
+                        else -> "Trakt doesn't list one for this show"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Change channel",
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChannelDialog(
+    traktNetwork: String?,
+    networkOverride: String?,
+    onSave: (String) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val trakt = traktNetwork?.trim()?.takeIf { it.isNotEmpty() }
+    var name by rememberSaveable { mutableStateOf(networkOverride ?: trakt.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Channel") },
+        text = {
+            Column {
+                Text(
+                    text = if (trakt != null) {
+                        "Trakt lists $trakt. Pick where this show airs for you; it's " +
+                            "used on this page, To Watch and Coming Up."
+                    } else {
+                        "Pick where this show airs for you; it's used on this page, " +
+                            "To Watch and Coming Up."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Channel name") },
+                    singleLine = true,
+                    leadingIcon = {
+                        ServiceBadge(network = name.trim(), size = 22.dp)
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { onSave(name) }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                // Bounded and scrollable so the field and buttons stay on
+                // screen on short displays or with large font sizes.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    suggestedServices.forEach { service ->
+                        SuggestionChip(
+                            onClick = { name = service },
+                            label = { Text(service) },
+                            icon = { ServiceBadge(network = service, size = 16.dp) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name) }) {
+                Text("Save", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            Row {
+                if (networkOverride != null) {
+                    TextButton(onClick = onReset) {
+                        Text(if (trakt != null) "Use Trakt's" else "Remove")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        },
+    )
 }
 
 @Composable
