@@ -22,6 +22,7 @@ class StreamingAppTest {
         assertEquals("Disney+", streamingAppFor("Disney+")?.name)
         assertEquals("Prime Video", streamingAppFor("Amazon")?.name)
         assertEquals("Apple TV", streamingAppFor("Apple TV+")?.name)
+        assertEquals("Apple TV", streamingAppFor("Apple")?.name)
         assertEquals("Max", streamingAppFor("HBO Max")?.name)
     }
 

@@ -45,7 +45,8 @@ internal fun serviceLogoFor(network: String?): Int? {
     return when {
         // "max" first so "HBO Max" resolves to Max rather than HBO.
         "max" in key -> R.drawable.service_max
-        "apple tv" in key || "appletv" in key -> R.drawable.service_appletv
+        // Plain "apple" too, so a hand-typed "Apple" still gets the mark.
+        "apple" in key -> R.drawable.service_appletv
         "netflix" in key -> R.drawable.service_netflix
         "disney" in key -> R.drawable.service_disney
         // Before "hulu" so "FX on Hulu" credits the network, not the platform.
@@ -82,9 +83,9 @@ internal val suggestedServices: List<String> = listOf(
     "HBO",
     "Max",
     "Netflix",
-    "Plex",
+    "Apple TV",
     "Prime Video",
-    "Apple TV+",
+    "Plex",
     "Disney+",
     "Hulu",
     "Paramount+",

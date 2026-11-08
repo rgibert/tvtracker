@@ -38,6 +38,7 @@ class ServiceBadgeTest {
     fun `apple tv plus resolves to the apple tv mark`() {
         assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple TV+"))
         assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple TV"))
+        assertEquals(R.drawable.service_appletv, serviceLogoFor("Apple"))
     }
 
     @Test

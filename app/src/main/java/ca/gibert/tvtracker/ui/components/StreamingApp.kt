@@ -62,7 +62,7 @@ internal fun streamingAppFor(network: String?): StreamingApp? {
 
     return when {
         "max" in key -> Max
-        "apple tv" in key || "appletv" in key -> AppleTv
+        "apple" in key -> AppleTv
         "netflix" in key -> Netflix
         "disney" in key -> DisneyPlus
         "fx" in key -> Hulu
