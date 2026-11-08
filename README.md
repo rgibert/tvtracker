@@ -17,6 +17,10 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
   isn't always where it airs for you (HBO in North America). Tap the channel on
   a show's page to pin your own; it replaces Trakt's everywhere in the app and
   can be reset there or under **Settings → Pinned channels**.
+- **Open in Plex** – shows pinned to Plex get an **Open in Plex** button. With
+  a server set under **Settings → Plex address** (for example
+  `192.168.1.10:32400`) it searches that server for the show; otherwise it
+  opens the Plex app if installed, or app.plex.tv.
 - **Offline-friendly** – the last list and show details are cached on the device
   and shown (with a "saved data" banner) when Trakt can't be reached.
 - **Light on the Trakt API** – watched progress is fetched in bulk (one

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -51,6 +53,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ca.gibert.tvtracker.BuildConfig
 import ca.gibert.tvtracker.data.AppContainer
+import ca.gibert.tvtracker.data.DEFAULT_PLEX_ADDRESS
 import ca.gibert.tvtracker.data.User
 import ca.gibert.tvtracker.ui.components.Pill
 import ca.gibert.tvtracker.ui.openUrl
@@ -79,6 +84,7 @@ fun SettingsScreen(
 
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmForgetApp by rememberSaveable { mutableStateOf(false) }
+    var editingPlexAddress by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
@@ -167,6 +173,17 @@ fun SettingsScreen(
                 }
             }
 
+            SettingsSection(title = "Plex") {
+                SettingsRow(
+                    icon = Icons.Outlined.LiveTv,
+                    title = "Plex address",
+                    subtitle = state.plexAddress
+                        ?: "${DEFAULT_PLEX_ADDRESS.substringAfter("://")} (default)",
+                    onClick = { editingPlexAddress = true },
+                    trailing = "Change",
+                )
+            }
+
             SettingsSection(title = "Saved data") {
                 SettingsRow(
                     icon = Icons.Outlined.DeleteOutline,
@@ -237,6 +254,17 @@ fun SettingsScreen(
                 viewModel.signOut()
             },
             onDismiss = { confirmSignOut = false },
+        )
+    }
+
+    if (editingPlexAddress) {
+        PlexAddressDialog(
+            current = state.plexAddress,
+            onSave = { address ->
+                editingPlexAddress = false
+                viewModel.setPlexAddress(address)
+            },
+            onDismiss = { editingPlexAddress = false },
         )
     }
 
@@ -485,6 +513,70 @@ private fun SettingsRow(
             )
         }
     }
+}
+
+/**
+ * Edits where "Open in Plex" goes for shows pinned to Plex: a home server
+ * (`192.168.1.10:32400`) or Plex's hosted app when left blank.
+ */
+@Composable
+private fun PlexAddressDialog(
+    current: String?,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var address by rememberSaveable { mutableStateOf(current.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Plex address") },
+        text = {
+            Column {
+                Text(
+                    text = "Shows whose channel is Plex get an \"Open in Plex\" button that " +
+                        "searches this server. Leave it blank to use app.plex.tv.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Server address") },
+                    placeholder = { Text("192.168.1.10:32400") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = { onSave(address) },
+                    ),
+                    supportingText = {
+                        Text("Without http:// or https://, http:// is assumed.")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(address) }) {
+                Text("Save", fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            Row {
+                if (current != null) {
+                    TextButton(onClick = { onSave("") }) {
+                        Text("Use default")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        },
+    )
 }
 
 @Composable

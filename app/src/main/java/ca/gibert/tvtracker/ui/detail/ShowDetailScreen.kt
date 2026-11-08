@@ -1,5 +1,6 @@
 package ca.gibert.tvtracker.ui.detail
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -63,8 +64,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
@@ -82,6 +83,9 @@ import ca.gibert.tvtracker.data.DetailSeason
 import ca.gibert.tvtracker.data.Episode
 import ca.gibert.tvtracker.data.Show
 import ca.gibert.tvtracker.data.ShowDetail
+import ca.gibert.tvtracker.data.isPlexChannel
+import ca.gibert.tvtracker.data.plexSearchUrl
+import ca.gibert.tvtracker.ui.openUrl
 import ca.gibert.tvtracker.ui.components.CachedBanner
 import ca.gibert.tvtracker.ui.components.EmptyState
 import ca.gibert.tvtracker.ui.components.EpisodeStill
@@ -112,6 +116,7 @@ fun ShowDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var editingChannel by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
@@ -155,6 +160,12 @@ fun ShowDetailScreen(
                         onToggleEpisode = viewModel::toggleEpisode,
                         onToggleHidden = viewModel::toggleHidden,
                         onEditChannel = { editingChannel = true },
+                        plexAddress = state.plexAddress,
+                        onOpenInPlex = if (isPlexChannel(detail.show.network)) {
+                            { openInPlex(context, state.plexAddress, detail.show.title) }
+                        } else {
+                            null
+                        },
                     )
                 }
             }
@@ -198,6 +209,8 @@ private fun DetailContent(
     onToggleEpisode: (DetailEpisode) -> Unit,
     onToggleHidden: () -> Unit,
     onEditChannel: () -> Unit,
+    plexAddress: String?,
+    onOpenInPlex: (() -> Unit)?,
 ) {
     val season = detail.seasons.firstOrNull { it.number == selectedSeason }
 
@@ -224,12 +237,23 @@ private fun DetailContent(
             )
         }
 
-        // detail carries the pinned channel, so the app matches what is shown.
-        item(key = "open_app") {
-            OpenInAppRow(
-                network = detail.show.network,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+        if (onOpenInPlex != null) {
+            // Plex gets its own row so it can go to the user's server.
+            item(key = "open_in_plex") {
+                OpenInPlexRow(
+                    plexAddress = plexAddress,
+                    onClick = onOpenInPlex,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+        } else {
+            // detail carries the pinned channel, so the app matches what is shown.
+            item(key = "open_app") {
+                OpenInAppRow(
+                    network = detail.show.network,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
 
         item(key = "list_visibility") {
@@ -600,6 +624,69 @@ private fun ChannelRow(
             Icon(
                 imageVector = Icons.Outlined.Edit,
                 contentDescription = "Change channel",
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Opens a Plex-pinned show: a server address saved in Settings wins, then the
+ * Plex app if it is installed, then a search on app.plex.tv.
+ */
+private fun openInPlex(context: Context, address: String?, title: String) {
+    if (address == null) {
+        val intent = streamingAppFor("Plex")?.let { launchIntentFor(context, it) }
+        // The app can be uninstalled between composition and the tap.
+        if (intent != null && runCatching { context.startActivity(intent) }.isSuccess) return
+    }
+    context.openUrl(plexSearchUrl(address, title))
+}
+
+/** Shown when the show's channel is Plex; the address is set in Settings. */
+@Composable
+private fun OpenInPlexRow(
+    plexAddress: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+
+    GlassSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ServiceBadge(network = "Plex", size = 22.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Open in Plex",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurface,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = if (plexAddress != null) {
+                        "Searches ${plexAddress.substringAfter("://")} for this show"
+                    } else {
+                        "Opens the Plex app, or app.plex.tv · set a server in Settings"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                contentDescription = null,
                 tint = colors.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )

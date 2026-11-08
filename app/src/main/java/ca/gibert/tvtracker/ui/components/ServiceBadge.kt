@@ -82,6 +82,7 @@ internal val suggestedServices: List<String> = listOf(
     "HBO",
     "Max",
     "Netflix",
+    "Plex",
     "Prime Video",
     "Apple TV+",
     "Disney+",
@@ -99,7 +100,6 @@ internal val suggestedServices: List<String> = listOf(
     "Crunchyroll",
     "Tubi",
     "Roku",
-    "Plex",
     "MUBI",
 )
 

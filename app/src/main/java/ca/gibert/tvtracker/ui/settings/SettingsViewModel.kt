@@ -12,6 +12,7 @@ import ca.gibert.tvtracker.data.HiddenShow
 import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.NetworkOverride
 import ca.gibert.tvtracker.data.NetworkOverrideStore
+import ca.gibert.tvtracker.data.PlexSettingsStore
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.data.User
 import ca.gibert.tvtracker.util.friendlyError
@@ -32,6 +33,8 @@ data class SettingsUiState(
     val isBusy: Boolean = false,
     val hiddenShows: List<HiddenShow> = emptyList(),
     val networkOverrides: List<NetworkOverride> = emptyList(),
+    /** Saved Plex address; null means Plex's hosted web app. */
+    val plexAddress: String? = null,
 )
 
 class SettingsViewModel(
@@ -40,6 +43,7 @@ class SettingsViewModel(
     private val authRepository: AuthRepository,
     private val hiddenShowStore: HiddenShowStore,
     private val networkOverrideStore: NetworkOverrideStore,
+    private val plexSettingsStore: PlexSettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -56,6 +60,38 @@ class SettingsViewModel(
         loadProfile()
         loadHiddenShows()
         loadNetworkOverrides()
+        loadPlexAddress()
+    }
+
+    /** Saves where "Open in Plex" goes; blank goes back to Plex's hosted app. */
+    fun setPlexAddress(address: String) {
+        viewModelScope.launch {
+            try {
+                plexSettingsStore.setAddress(address)
+                val saved = plexSettingsStore.readAddress()
+                _state.update { it.copy(plexAddress = saved) }
+                _messages.send(
+                    if (saved == null) "Plex opens app.plex.tv" else "Plex opens $saved",
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _messages.send(friendlyError(error))
+            }
+        }
+    }
+
+    private fun loadPlexAddress() {
+        viewModelScope.launch {
+            try {
+                val address = plexSettingsStore.readAddress()
+                _state.update { it.copy(plexAddress = address) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Falls back to the default address shown in the row.
+            }
+        }
     }
 
     fun refreshProfile() = loadProfile()
@@ -195,6 +231,7 @@ class SettingsViewModel(
                     authRepository = container.authRepository,
                     hiddenShowStore = container.hiddenShowStore,
                     networkOverrideStore = container.networkOverrideStore,
+                    plexSettingsStore = container.plexSettingsStore,
                 )
             }
         }

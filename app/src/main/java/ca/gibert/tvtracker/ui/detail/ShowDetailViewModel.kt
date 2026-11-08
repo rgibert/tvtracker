@@ -9,6 +9,7 @@ import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.DetailEpisode
 import ca.gibert.tvtracker.data.HiddenShowStore
 import ca.gibert.tvtracker.data.NetworkOverrideStore
+import ca.gibert.tvtracker.data.PlexSettingsStore
 import ca.gibert.tvtracker.data.ShowDetail
 import ca.gibert.tvtracker.data.TraktRepository
 import ca.gibert.tvtracker.util.friendlyError
@@ -34,6 +35,8 @@ data class ShowDetailUiState(
     val isHidden: Boolean = false,
     /** Channel the user pinned for this show, replacing Trakt's network. */
     val networkOverride: String? = null,
+    /** Saved Plex address for "Open in Plex"; null means Plex's hosted app. */
+    val plexAddress: String? = null,
 ) {
     /** [detail] as displayed: Trakt's data with the pinned channel applied. */
     val displayDetail: ShowDetail?
@@ -49,6 +52,7 @@ class ShowDetailViewModel(
     private val repository: TraktRepository,
     private val hiddenShows: HiddenShowStore,
     private val networkOverrides: NetworkOverrideStore,
+    private val plexSettings: PlexSettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowDetailUiState())
@@ -205,6 +209,7 @@ class ShowDetailViewModel(
                 it.copy(
                     isHidden = showId in hiddenShows.readIds(),
                     networkOverride = networkOverrides.readMap()[showId],
+                    plexAddress = plexSettings.readAddress(),
                 )
             }
 
@@ -317,6 +322,7 @@ class ShowDetailViewModel(
                         repository = container.traktRepository,
                         hiddenShows = container.hiddenShowStore,
                         networkOverrides = container.networkOverrideStore,
+                        plexSettings = container.plexSettingsStore,
                     )
                 }
             }

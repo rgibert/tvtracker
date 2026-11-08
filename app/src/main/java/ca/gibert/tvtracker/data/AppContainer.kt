@@ -65,6 +65,8 @@ class AppContainer(context: Context) {
 
     val networkOverrideStore = NetworkOverrideStore(context = context, json = json)
 
+    val plexSettingsStore = PlexSettingsStore(context)
+
     val traktRepository = TraktRepository(
         api = traktApi,
         cache = cacheStore,
