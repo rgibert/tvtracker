@@ -135,6 +135,13 @@ data class WatchlistItem(
 )
 
 @Serializable
+data class SearchResult(
+    val type: String? = null,
+    val score: Double? = null,
+    val show: Show? = null,
+)
+
+@Serializable
 data class CalendarItem(
     @SerialName("first_aired") val firstAired: String,
     val episode: Episode,
@@ -272,6 +279,16 @@ data class SyncEpisode(
 @Serializable
 data class SyncEpisodesRequest(
     val episodes: List<SyncEpisode>,
+)
+
+@Serializable
+data class SyncShow(
+    val ids: TraktIds,
+)
+
+@Serializable
+data class SyncShowsRequest(
+    val shows: List<SyncShow>,
 )
 
 @Serializable
