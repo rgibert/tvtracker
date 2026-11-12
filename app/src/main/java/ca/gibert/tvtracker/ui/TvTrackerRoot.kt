@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LiveTv
@@ -53,6 +54,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ca.gibert.tvtracker.data.AppContainer
 import ca.gibert.tvtracker.data.AuthState
+import ca.gibert.tvtracker.ui.add.AddShowScreen
 import ca.gibert.tvtracker.ui.auth.AuthScreen
 import ca.gibert.tvtracker.ui.detail.ShowDetailScreen
 import ca.gibert.tvtracker.ui.settings.SettingsScreen
@@ -67,6 +69,7 @@ private object Routes {
     const val WATCH = "watch"
     const val UPCOMING = "upcoming"
     const val SETTINGS = "settings"
+    const val ADD_SHOW = "add-show"
     const val SHOW = "show/{showId}"
     const val SHOW_ARG = "showId"
 
@@ -123,6 +126,7 @@ private fun MainScaffold(container: AppContainer) {
                 currentRoute = currentRoute,
                 onBack = { navController.popBackStack() },
                 onSettings = { navController.navigate(Routes.SETTINGS) },
+                onAddShow = { navController.navigate(Routes.ADD_SHOW) },
             )
         },
         bottomBar = {
@@ -155,6 +159,7 @@ private fun MainScaffold(container: AppContainer) {
                     onOpenShow = { showId ->
                         navController.navigate(Routes.show(showId))
                     },
+                    onAddShow = { navController.navigate(Routes.ADD_SHOW) },
                 )
             }
 
@@ -169,6 +174,15 @@ private fun MainScaffold(container: AppContainer) {
 
             composable(Routes.SETTINGS) {
                 SettingsScreen(container = container)
+            }
+
+            composable(Routes.ADD_SHOW) {
+                AddShowScreen(
+                    container = container,
+                    onOpenShow = { showId ->
+                        navController.navigate(Routes.show(showId))
+                    },
+                )
             }
 
             composable(
@@ -193,6 +207,7 @@ private fun ZenTopBar(
     currentRoute: String?,
     onBack: () -> Unit,
     onSettings: () -> Unit,
+    onAddShow: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -225,6 +240,7 @@ private fun ZenTopBar(
                 } else {
                     when (currentRoute) {
                         Routes.SETTINGS -> "Settings"
+                        Routes.ADD_SHOW -> "Add a show"
                         Routes.SHOW -> "Show details"
                         else -> "TV Tracker"
                     }
@@ -239,16 +255,28 @@ private fun ZenTopBar(
                     text = if (isTab) {
                         "Your queue"
                     } else {
-                        if (currentRoute == Routes.SETTINGS) {
-                            "Account & saved data"
-                        } else {
-                            "Episodes & progress"
+                        when (currentRoute) {
+                            Routes.SETTINGS -> "Account & saved data"
+                            Routes.ADD_SHOW -> "Search Trakt"
+                            else -> "Episodes & progress"
                         }
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.onSurfaceVariant,
                 )
             }
+        }
+
+        if (isTab && currentRoute == Routes.WATCH) {
+            ZenIconButton(onClick = onAddShow) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add a show",
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
         }
 
         if (isTab) {

@@ -75,6 +75,18 @@ interface TraktApi {
         @Query("extended") extended: String,
     ): List<Season>
 
+    // Text search over shows only; extended adds the poster, network and
+    // overview the results list shows.
+    @GET("search/show")
+    suspend fun searchShows(
+        @Query("query") query: String,
+        @Query("extended") extended: String,
+        @Query("limit") limit: Int,
+    ): List<SearchResult>
+
+    @POST("sync/watchlist")
+    suspend fun addToWatchlist(@Body body: SyncShowsRequest): SyncResponse
+
     @POST("sync/history")
     suspend fun addToHistory(@Body body: SyncEpisodesRequest): SyncResponse
 

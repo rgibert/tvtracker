@@ -159,6 +159,26 @@ class TraktRepository(
         detail
     }
 
+    suspend fun searchShows(query: String): List<Show> =
+        searchResultShows(
+            api.searchShows(query = query, extended = EXTENDED, limit = SEARCH_LIMIT),
+        )
+
+    /**
+     * Puts [show] on the Trakt watchlist, which is how a show the user hasn't
+     * started yet joins To Watch. Counts as a mutation so To Watch refreshes
+     * as soon as it is visible again.
+     */
+    suspend fun addToWatchlist(show: Show) {
+        val response = api.addToWatchlist(
+            SyncShowsRequest(listOf(SyncShow(TraktIds(trakt = show.ids.trakt)))),
+        )
+        if (!response.notFound?.shows.isNullOrEmpty()) {
+            error("Trakt didn't recognise that show.")
+        }
+        mutationCounter.incrementAndGet()
+    }
+
     suspend fun markEpisodeWatched(episodeId: Int) {
         val response = api.addToHistory(
             SyncEpisodesRequest(listOf(SyncEpisode(TraktIds(trakt = episodeId)))),
@@ -240,6 +260,7 @@ class TraktRepository(
     private companion object {
         const val EXTENDED = "full,images"
         const val PAGE_LIMIT = 100
+        const val SEARCH_LIMIT = 30
         const val CALENDAR_DAYS = 14L
         const val CALENDAR_REQUEST_DAYS = 17
         const val WATCHED_EXTENDED = "progress"
