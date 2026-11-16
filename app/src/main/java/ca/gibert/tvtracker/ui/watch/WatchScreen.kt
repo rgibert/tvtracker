@@ -65,6 +65,7 @@ import ca.gibert.tvtracker.util.parseTraktInstant
 fun WatchScreen(
     container: AppContainer,
     onOpenShow: (Int) -> Unit,
+    onAddShow: () -> Unit,
     viewModel: WatchViewModel = viewModel(factory = WatchViewModel.factory(container)),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -129,8 +130,15 @@ fun WatchScreen(
                             message = "Shows you watch and shows on your Trakt watchlist will " +
                                 "appear here with the next episode to watch.",
                             action = {
-                                androidx.compose.material3.Button(onClick = viewModel::refresh) {
-                                    Text("Check again")
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    androidx.compose.material3.Button(onClick = onAddShow) {
+                                        Text("Add a show")
+                                    }
+                                    androidx.compose.material3.OutlinedButton(
+                                        onClick = viewModel::refresh,
+                                    ) {
+                                        Text("Check again")
+                                    }
                                 }
                             },
                         )

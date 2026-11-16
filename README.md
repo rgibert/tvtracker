@@ -11,6 +11,9 @@ It is meant to be a lighter alternative to bigger all-in-one Trakt apps.
   shows on your watchlist, grouped by local day. Switch to a month calendar
   that marks airing days, scroll to the next month to load its episodes, and
   tap a day to see what airs then.
+- **Add shows** – tap **+** on To Watch to search Trakt by title. Adding a show
+  puts it on your Trakt watchlist, so it joins To Watch and Coming Up; shows
+  already in your queue are marked, and tapping a result opens its details.
 - **Show details** – full season and episode list with watched checkboxes, a
   "mark watched" shortcut for the next episode, and per-show progress.
 - **Pinned channels** – Trakt lists a show's original network (BBC, say), which
